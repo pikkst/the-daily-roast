@@ -28,13 +28,13 @@
       "name": "Latest Roasts",
       "short_name": "Latest",
       "url": "/",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
     },
     {
       "name": "Roast or Real? Quiz",
       "short_name": "Quiz",
       "url": "/quiz",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
     }
   ]
 }
