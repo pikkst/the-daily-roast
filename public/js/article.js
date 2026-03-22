@@ -203,6 +203,9 @@
 
     // Schema.org structured data
     updateSchema(article);
+
+    // Dispatch event for comments system
+    window.dispatchEvent(new CustomEvent('article-loaded', { detail: { id: article.id, slug: article.slug } }));
   }
 
   function setupShare(article) {
@@ -454,13 +457,17 @@
     const schemaEl = document.getElementById('article-schema');
     if (!schemaEl) return;
 
+    const articleUrl = `${window.location.origin}/article?slug=${article.slug}`;
+
     const schema = {
       "@context": "https://schema.org",
-      "@type": "Article",
+      "@type": "SatiricalArticle",
       "headline": article.title,
       "description": article.meta_description || article.excerpt,
       "datePublished": article.created_at,
       "dateModified": article.updated_at || article.created_at,
+      "url": articleUrl,
+      "mainEntityOfPage": articleUrl,
       "author": {
         "@type": "Person",
         "name": article.author || "AI Correspondent"
@@ -468,18 +475,32 @@
       "publisher": {
         "@type": "Organization",
         "name": "The Daily Roast",
+        "url": window.location.origin,
         "logo": {
           "@type": "ImageObject",
-          "url": "/images/logo.png"
+          "url": `${window.location.origin}/icons/icon-512.svg`
         }
       },
       "genre": "Satire",
       "keywords": (article.tags || []).join(', '),
-      "articleSection": article.category_name || "News"
+      "articleSection": article.category_name || "News",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "creativeWorkStatus": "Published"
     };
 
     if (article.image_url) {
-      schema.image = article.image_url;
+      schema.image = {
+        "@type": "ImageObject",
+        "url": article.image_url,
+        "width": 1024,
+        "height": 1024
+      };
+      schema.thumbnailUrl = article.image_url;
+    }
+
+    if (article.reading_time) {
+      schema.timeRequired = `PT${article.reading_time}M`;
     }
 
     schemaEl.textContent = JSON.stringify(schema, null, 2);

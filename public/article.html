@@ -35,8 +35,11 @@
   <!-- Styles -->
   <link rel="stylesheet" href="css/style.css">
   
-  <!-- Favicon -->
+  <!-- Favicon & PWA -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#dc3545">
+  <link rel="apple-touch-icon" href="/icons/icon-192.svg">
 </head>
 <body class="article-page">
   <!-- Satire Disclaimer Banner -->
@@ -205,6 +208,46 @@
             </div>
           </div>
 
+          <!-- Comments Section -->
+          <div class="comments-section" id="comments-section" style="display:none;">
+            <div class="comments-header">
+              <h3 class="comments-title">💬 Roast Reviews <span class="comments-count" id="comments-count">(0)</span></h3>
+            </div>
+            
+            <!-- New Comment Form -->
+            <div class="comment-form-wrap">
+              <form class="comment-form" id="comment-form">
+                <div class="comment-form-row">
+                  <input type="text" class="comment-name-input" id="comment-name" placeholder="Your name (optional)" maxlength="50" autocomplete="name">
+                </div>
+                <div class="comment-form-row">
+                  <textarea class="comment-textarea" id="comment-text" placeholder="Drop your hottest take..." maxlength="1000" rows="3" required></textarea>
+                </div>
+                <div class="comment-form-actions">
+                  <span class="comment-char-count" id="comment-char-count">0/1000</span>
+                  <button type="submit" class="comment-submit-btn" id="comment-submit">
+                    <span class="comment-submit-text">Post Comment</span>
+                    <span class="comment-submit-loading" style="display:none;">Posting...</span>
+                  </button>
+                </div>
+                <div class="comment-form-message" id="comment-form-message" style="display:none;"></div>
+              </form>
+            </div>
+
+            <!-- Comments List -->
+            <div class="comments-list" id="comments-list">
+              <div class="comments-loading" id="comments-loading">Loading comments...</div>
+              <div class="comments-empty" id="comments-empty" style="display:none;">
+                <p>No comments yet. Be the first to roast the roast! 🔥</p>
+              </div>
+            </div>
+
+            <!-- Load More Comments -->
+            <div class="comments-load-more" id="comments-load-more" style="display:none;">
+              <button class="btn btn-outline btn-sm" id="load-more-comments">Load More Comments</button>
+            </div>
+          </div>
+
           <!-- Support & Newsletter -->
           <div class="support-section" id="support-section">
             <!-- Donation -->
@@ -308,5 +351,11 @@
   <script src="js/config.js"></script>
   <script src="js/article.js"></script>
   <script src="js/support.js"></script>
+  <script src="js/comments.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
 </body>
 </html>

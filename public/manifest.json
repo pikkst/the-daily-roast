@@ -1,0 +1,40 @@
+{
+  "name": "The Daily Roast",
+  "short_name": "Daily Roast",
+  "description": "AI-powered satirical news. Real headlines, unreal stories.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1b2838",
+  "theme_color": "#dc3545",
+  "orientation": "any",
+  "categories": ["news", "entertainment"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Latest Roasts",
+      "short_name": "Latest",
+      "url": "/",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Roast or Real? Quiz",
+      "short_name": "Quiz",
+      "url": "/quiz",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

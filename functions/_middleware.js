@@ -1,11 +1,12 @@
 // ============================================
 // Cloudflare Pages Middleware
-// Injects Open Graph meta tags for article pages
-// so social media crawlers see proper title/image/description
+// 1. Dynamic sitemap.xml generation
+// 2. OG meta tag injection for article pages
 // ============================================
 
 const SUPABASE_URL = 'https://pbwswrieljqfshnjulzs.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBid3N3cmllbGpxZnNobmp1bHpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNzg5ODQsImV4cCI6MjA4OTc1NDk4NH0.buK75E84SRp-By6XCsKgMFnl31nNgj5cZV7e3lEkIiI';
+const CATEGORIES = ['politics', 'technology', 'business', 'science', 'entertainment', 'sports', 'world'];
 
 function escapeHtml(str) {
   if (!str) return '';
@@ -16,11 +17,48 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;');
 }
 
+async function handleSitemap(url) {
+  const origin = url.origin;
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/articles?select=slug,created_at,updated_at&order=created_at.desc&limit=1000`,
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
+    const articles = await res.json();
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>${origin}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>${origin}/quiz</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>`;
+
+    for (const cat of CATEGORIES) {
+      xml += `\n  <url><loc>${origin}/?cat=${cat}</loc><changefreq>daily</changefreq><priority>0.8</priority></url>`;
+    }
+
+    if (Array.isArray(articles)) {
+      for (const a of articles) {
+        const lastmod = new Date(a.updated_at || a.created_at).toISOString().split('T')[0];
+        xml += `\n  <url><loc>${origin}/article?slug=${a.slug}</loc><lastmod>${lastmod}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>`;
+      }
+    }
+    xml += '\n</urlset>';
+    return new Response(xml, { status: 200, headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } });
+  } catch (err) {
+    return new Response('<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>', {
+      status: 200, headers: { 'Content-Type': 'application/xml' }
+    });
+  }
+}
+
 export async function onRequest(context) {
   const url = new URL(context.request.url);
 
-  // Only intercept article page requests with a slug parameter
-  // Cloudflare Pages strips .html, so the path is /article (not /article.html)
+  // --- Dynamic Sitemap ---
+  if (url.pathname === '/sitemap.xml' || url.pathname === '/sitemap') {
+    return handleSitemap(url);
+  }
+
+  // --- Article OG injection ---
   if (!(url.pathname === '/article' || url.pathname.endsWith('/article.html')) || !url.searchParams.get('slug')) {
     return context.next();
   }
