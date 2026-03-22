@@ -7,18 +7,18 @@ const CONFIG = {
   SUPABASE_URL: 'https://pbwswrieljqfshnjulzs.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBid3N3cmllbGpxZnNobmp1bHpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNzg5ODQsImV4cCI6MjA4OTc1NDk4NH0.buK75E84SRp-By6XCsKgMFnl31nNgj5cZV7e3lEkIiI',
   
-  // Stripe (replace with your live keys & price IDs from Stripe Dashboard)
-  STRIPE_PUBLISHABLE_KEY: '', // pk_live_... or pk_test_...
+  // Stripe (test mode)
+  STRIPE_PUBLISHABLE_KEY: 'pk_test_51TDnMJJZs0YoVLYRyhzJ5aJjfkRXf2h8GvrPCOeRvi4r24HzyKesMOE0Ao6B0LmnLn5SA6JZFpGEuo921V30BiGR00qexqQ760',
   STRIPE_PRICES: {
-    monthly_2:  '', // price_xxx from Stripe Dashboard (€2/month)
-    monthly_5:  '', // price_xxx from Stripe Dashboard (€5/month)
-    monthly_10: ''  // price_xxx from Stripe Dashboard (€10/month)
+    monthly_2:  'price_1TDnQoJZs0YoVLYRnCWs8KQm',  // Coffee Supporter €2/month
+    monthly_5:  'price_1TDnR4JZs0YoVLYRxJvZ0Ucf',  // Lunch Supporter €5/month
+    monthly_10: 'price_1TDnRKJZs0YoVLYRHHeZBWyR'   // Party Supporter €10/month
   },
   // OR: Use Stripe Payment Links (simpler, no Stripe.js needed)
   STRIPE_PAYMENT_LINKS: {
-    monthly_2:  '', // https://buy.stripe.com/xxx
-    monthly_5:  '', // https://buy.stripe.com/xxx
-    monthly_10: ''  // https://buy.stripe.com/xxx
+    monthly_2:  '',
+    monthly_5:  '',
+    monthly_10: ''
   },
   
   // Site
