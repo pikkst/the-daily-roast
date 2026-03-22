@@ -205,13 +205,13 @@
     const title = encodeURIComponent(article.title);
     const text = encodeURIComponent(article.excerpt);
 
-    const twitterBtn = document.getElementById('share-twitter');
-    const fbBtn = document.getElementById('share-facebook');
-    const redditBtn = document.getElementById('share-reddit');
-    const copyBtn = document.getElementById('share-copy');
+    const twBtn = document.getElementById('sb-tw');
+    const fbBtn = document.getElementById('sb-fb');
+    const rdBtn = document.getElementById('sb-rd');
+    const cpBtn = document.getElementById('sb-cp');
 
-    if (twitterBtn) {
-      twitterBtn.addEventListener('click', () => {
+    if (twBtn) {
+      twBtn.addEventListener('click', () => {
         window.open(`https://twitter.com/intent/tweet?text=${title}&url=${encodeURIComponent(url)}`, '_blank', 'width=600,height=400');
       });
     }
@@ -222,47 +222,47 @@
       });
     }
 
-    if (redditBtn) {
-      redditBtn.addEventListener('click', () => {
+    if (rdBtn) {
+      rdBtn.addEventListener('click', () => {
         window.open(`https://reddit.com/submit?url=${encodeURIComponent(url)}&title=${title}`, '_blank', 'width=600,height=400');
       });
     }
 
-    const whatsappBtn = document.getElementById('share-whatsapp');
-    if (whatsappBtn) {
-      whatsappBtn.addEventListener('click', () => {
+    const waBtn = document.getElementById('sb-wa');
+    if (waBtn) {
+      waBtn.addEventListener('click', () => {
         window.open(`https://api.whatsapp.com/send?text=${title}%20${encodeURIComponent(url)}`, '_blank');
       });
     }
 
-    const telegramBtn = document.getElementById('share-telegram');
-    if (telegramBtn) {
-      telegramBtn.addEventListener('click', () => {
+    const tgBtn = document.getElementById('sb-tg');
+    if (tgBtn) {
+      tgBtn.addEventListener('click', () => {
         window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${title}`, '_blank', 'width=600,height=400');
       });
     }
 
-    const linkedinBtn = document.getElementById('share-linkedin');
-    if (linkedinBtn) {
-      linkedinBtn.addEventListener('click', () => {
+    const liBtn = document.getElementById('sb-li');
+    if (liBtn) {
+      liBtn.addEventListener('click', () => {
         window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank', 'width=600,height=400');
       });
     }
 
-    const emailBtn = document.getElementById('share-email');
-    if (emailBtn) {
-      emailBtn.addEventListener('click', () => {
+    const emBtn = document.getElementById('sb-em');
+    if (emBtn) {
+      emBtn.addEventListener('click', () => {
         window.location.href = `mailto:?subject=${title}&body=Check%20out%20this%20hilarious%20satirical%20article:%20${encodeURIComponent(url)}`;
       });
     }
 
-    if (copyBtn) {
-      copyBtn.addEventListener('click', async () => {
+    if (cpBtn) {
+      cpBtn.addEventListener('click', async () => {
         try {
           await navigator.clipboard.writeText(url);
-          copyBtn.innerHTML = '<span style="font-size:14px;">✓ Copied!</span>';
+          cpBtn.innerHTML = '<span style="font-size:14px;">✓ Copied!</span>';
           setTimeout(() => {
-            copyBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+            cpBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
           }, 2000);
         } catch (e) {
           prompt('Copy this link:', url);
@@ -270,11 +270,11 @@
       });
     }
 
-    // Native Web Share API (mobile)
-    const nativeBtn = document.getElementById('share-native');
-    if (nativeBtn && navigator.share) {
-      nativeBtn.style.display = 'flex';
-      nativeBtn.addEventListener('click', async () => {
+    // Native Web API (mobile)
+    const nsBtn = document.getElementById('sb-ns');
+    if (nsBtn && navigator.share) {
+      nsBtn.style.display = 'flex';
+      nsBtn.addEventListener('click', async () => {
         try {
           await navigator.share({
             title: article.title,
