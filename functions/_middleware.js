@@ -1,6 +1,7 @@
 // ============================================
-// Cloudflare Pages Function — article.html
-// Injects Open Graph meta tags for social media crawlers
+// Cloudflare Pages Middleware
+// Injects Open Graph meta tags for article pages
+// so social media crawlers see proper title/image/description
 // ============================================
 
 const SUPABASE_URL = 'https://pbwswrieljqfshnjulzs.supabase.co';
@@ -17,20 +18,29 @@ function escapeHtml(str) {
 
 export async function onRequest(context) {
   const url = new URL(context.request.url);
-  const slug = url.searchParams.get('slug');
 
-  // No slug? Just serve the static page as-is
-  if (!slug) {
+  // Only intercept article.html requests with a slug parameter
+  if (!url.pathname.endsWith('/article.html') || !url.searchParams.get('slug')) {
     return context.next();
   }
 
+  const slug = url.searchParams.get('slug');
+
   // Fetch the original static HTML
   const response = await context.next();
+  const contentType = response.headers.get('Content-Type') || '';
+
+  // Only process HTML responses
+  if (!contentType.includes('text/html')) {
+    return response;
+  }
+
   let html = await response.text();
 
-  // Build new headers with correct Content-Type
-  const headers = new Headers(response.headers);
-  headers.set('Content-Type', 'text/html; charset=utf-8');
+  // If HTML is empty, something went wrong — just pass through
+  if (!html || html.length < 100) {
+    return response;
+  }
 
   try {
     // Fetch article data from Supabase REST API
@@ -47,7 +57,10 @@ export async function onRequest(context) {
     const articles = await apiRes.json();
 
     if (!articles || !articles[0]) {
-      return new Response(html, { status: 200, headers });
+      return new Response(html, {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
     }
 
     const article = articles[0];
@@ -92,17 +105,22 @@ export async function onRequest(context) {
       `<meta name="description" content="${description}">`
     );
 
-    // Inject og:url, og:site_name, and twitter:image right after og:image
+    // Inject og:url, og:site_name, and twitter:image after og:image
     const ogImageTag = `<meta property="og:image" content="${escapeHtml(image)}">`;
     html = html.replace(
       ogImageTag,
       `${ogImageTag}\n  <meta property="og:url" content="${escapeHtml(articleUrl)}">\n  <meta property="og:site_name" content="The Daily Roast">\n  <meta name="twitter:image" content="${escapeHtml(image)}">`
     );
 
-    return new Response(html, { status: 200, headers });
+    return new Response(html, {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
   } catch (err) {
-    // On error, return unmodified HTML
     console.error('OG injection error:', err);
-    return new Response(html, { status: 200, headers });
+    return new Response(html, {
+      status: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
   }
 }
