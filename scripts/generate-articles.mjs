@@ -794,6 +794,69 @@ async function uploadImageToSupabase(db, imageData, slug) {
 
 // ---------- Save to Supabase ----------
 
+/**
+ * Clean up article content that may have formatting artifacts from JSON parsing.
+ * Handles literal \n strings, escaped quotes, missing paragraph wrapping, etc.
+ */
+function cleanArticleContent(content) {
+  if (!content) return content;
+
+  let cleaned = content;
+
+  // 1) Replace literal backslash-n sequences (\\n or \n text) with actual newlines first
+  cleaned = cleaned.replace(/\\n/g, '\n');
+
+  // 2) Unescape escaped quotes  \" → "
+  cleaned = cleaned.replace(/\\"/g, '"');
+
+  // 3) Unescape double-escaped backslashes \\\\ → nothing useful
+  cleaned = cleaned.replace(/\\\\/g, '');
+
+  // 4) Remove stray actual newlines inside HTML tags (they're not needed)
+  //    But preserve newlines that separate paragraphs
+  //    Split on double+ newlines which indicate paragraph breaks
+  const blocks = cleaned.split(/\n{2,}/);
+
+  const processedBlocks = blocks.map(block => {
+    // Collapse single newlines within a block to spaces
+    let b = block.replace(/\n/g, ' ').trim();
+    if (!b) return '';
+
+    // If block already has proper HTML wrapping (<p>, <h2>, <blockquote>, etc.), keep it
+    if (/^<(?:p|h[1-6]|blockquote|div|ul|ol|li|section|figure|table|pre)/i.test(b)) {
+      return b;
+    }
+
+    // If it looks like a heading (short text, no HTML tags), wrap in <h2>
+    // Skip if it already contains tags
+    if (b.length < 100 && !/</.test(b) && !/[.!?]$/.test(b) && b.split(' ').length <= 12) {
+      return `<h2>${b}</h2>`;
+    }
+
+    // Otherwise wrap in <p>
+    return `<p>${b}</p>`;
+  }).filter(Boolean);
+
+  cleaned = processedBlocks.join('\n');
+
+  // 5) Fix any double-wrapped paragraphs like <p><p>...</p></p>
+  cleaned = cleaned.replace(/<p>\s*<p>/gi, '<p>');
+  cleaned = cleaned.replace(/<\/p>\s*<\/p>/gi, '</p>');
+
+  // 6) Fix empty paragraphs
+  cleaned = cleaned.replace(/<p>\s*<\/p>/gi, '');
+
+  // 7) Ensure blockquotes are properly structured
+  cleaned = cleaned.replace(/<blockquote>\s*(?!<p>)/gi, '<blockquote><p>');
+  cleaned = cleaned.replace(/(?<!<\/p>)\s*<\/blockquote>/gi, '</p></blockquote>');
+
+  // 8) Remove any leftover literal #Hashtag lines (tag artifacts from Gemini)
+  cleaned = cleaned.replace(/<p>\s*#\w+(\s*\n*#\w+)*\s*<\/p>/gi, '');
+  cleaned = cleaned.replace(/<h2>\s*#\w+\s*<\/h2>/gi, '');
+
+  return cleaned.trim();
+}
+
 async function saveArticle(db, article) {
   const slug = createSlug(article.title);
   
@@ -808,7 +871,7 @@ async function saveArticle(db, article) {
   const articleData = {
     title: article.title,
     slug: slug,
-    content: article.content,
+    content: cleanArticleContent(article.content),
     excerpt: article.excerpt,
     category_id: category?.id || null,
     author: article.author || 'AI Correspondent',

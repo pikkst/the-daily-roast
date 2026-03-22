@@ -146,10 +146,40 @@
       }
     }
 
-    // Article content
+    // Article content — clean up formatting artifacts from AI generation
     const contentEl = document.getElementById('article-content');
     if (contentEl) {
-      contentEl.innerHTML = article.content;
+      let html = article.content || '';
+
+      // Fix literal \n sequences that weren't converted to HTML
+      html = html.replace(/\\n/g, '\n');
+      html = html.replace(/\\"/g, '"');
+
+      // If content has no HTML tags at all, wrap paragraphs
+      if (!/<[a-z][\s\S]*>/i.test(html)) {
+        html = html.split(/\n{2,}/).filter(Boolean).map(block => {
+          const trimmed = block.replace(/\n/g, ' ').trim();
+          if (!trimmed) return '';
+          if (trimmed.length < 100 && trimmed.split(' ').length <= 12 && !/[.!?]$/.test(trimmed)) {
+            return '<h2>' + trimmed + '</h2>';
+          }
+          return '<p>' + trimmed + '</p>';
+        }).join('');
+      } else {
+        // Content has HTML but may have stray \n\n between tags
+        html = html.replace(/\n{2,}/g, '</p><p>');
+        html = html.replace(/\n/g, ' ');
+        // Clean up any resulting <p></p> empties
+        html = html.replace(/<p>\s*<\/p>/gi, '');
+        // Fix double <p> wrapping
+        html = html.replace(/<p>\s*<p>/gi, '<p>');
+        html = html.replace(/<\/p>\s*<\/p>/gi, '</p>');
+      }
+
+      // Remove leftover #Hashtag lines
+      html = html.replace(/<p>\s*#\w+(?:\s*#\w+)*\s*<\/p>/gi, '');
+
+      contentEl.innerHTML = html;
     }
 
     // Tags
