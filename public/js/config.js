@@ -14,11 +14,11 @@ const CONFIG = {
     monthly_5:  'price_1TDnR4JZs0YoVLYRxJvZ0Ucf',  // Lunch Supporter €5/month
     monthly_10: 'price_1TDnRKJZs0YoVLYRHHeZBWyR'   // Party Supporter €10/month
   },
-  // OR: Use Stripe Payment Links (simpler, no Stripe.js needed)
+  // Stripe Payment Links (test mode)
   STRIPE_PAYMENT_LINKS: {
-    monthly_2:  '',
-    monthly_5:  '',
-    monthly_10: ''
+    monthly_2:  'https://buy.stripe.com/test_7sYeVe2r84Sw21m4CobMQ00',
+    monthly_5:  'https://buy.stripe.com/test_6oU6oI9TA70EfSc9WIbMQ01',
+    monthly_10: 'https://buy.stripe.com/test_3cI4gA3vc3OsfSc7OAbMQ02'
   },
   
   // Site
