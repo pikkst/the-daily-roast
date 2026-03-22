@@ -885,37 +885,51 @@ button {
 /* Share Buttons */
 .article-share {
   display: flex;
-  align-items: center;
-  gap: var(--space-lg);
+  flex-direction: column;
+  gap: var(--space-md);
   padding: var(--space-xl) 0;
+  margin-top: var(--space-xl);
+  border-top: 1px solid var(--color-border);
 }
 
 .share-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .share-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-sm);
 }
 
 .share-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
   transition: all var(--transition);
-  color: var(--text-secondary);
+  color: var(--text-primary);
   background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.share-btn svg {
+  flex-shrink: 0;
+}
+
+.share-btn-label {
+  font-size: 0.8rem;
 }
 
 .share-btn:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
+  border-color: transparent;
 }
 
 .share-btn--twitter:hover { background: #1da1f2; color: white; }
@@ -927,8 +941,6 @@ button {
 .share-btn--email:hover { background: #6c757d; color: white; }
 .share-btn--copy:hover { background: var(--color-primary); color: white; }
 .share-btn--native:hover { background: var(--color-primary); color: white; }
-
-.share-buttons { flex-wrap: wrap; }
 
 .share-btn--copy .copied-tooltip {
   position: absolute;
@@ -1163,6 +1175,9 @@ button {
   .article-share {
     flex-direction: column;
     align-items: flex-start;
+  }
+  .share-btn-label {
+    display: none;
   }
 
   .ticker-label {
