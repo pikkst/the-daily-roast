@@ -1,0 +1,22 @@
+{
+  "name": "the-daily-roast",
+  "version": "1.0.0",
+  "description": "AI-powered satirical news website - Real headlines, unreal stories",
+  "type": "module",
+  "scripts": {
+    "generate": "node scripts/generate-articles.mjs",
+    "setup-seed": "node scripts/seed-initial.mjs",
+    "dev": "npx serve public -l 3000"
+  },
+  "dependencies": {
+    "@google/genai": "^1.46.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "fast-xml-parser": "^4.3.0"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

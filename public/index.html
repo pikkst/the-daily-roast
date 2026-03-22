@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Daily Roast — Real Headlines. Unreal Stories.</title>
+  <meta name="description" content="The Daily Roast is a satirical news website. We take real headlines and give them the roasting they deserve. 100% AI-generated humor, 0% real journalism.">
+  <meta name="robots" content="index, follow">
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="The Daily Roast — Satirical News">
+  <meta property="og:description" content="Real headlines. Unreal stories. AI-powered satirical news that roasts the day's biggest stories.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://picsum.photos/seed/daily-roast-og/1200/630">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="The Daily Roast — Satirical News">
+  <meta name="twitter:description" content="Real headlines. Unreal stories. AI-powered satirical news.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800;900&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/style.css">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
+  
+  <!-- Schema.org -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "The Daily Roast",
+    "url": "/",
+    "description": "AI-powered satirical news website",
+    "publisher": {
+      "@type": "Organization",
+      "name": "The Daily Roast",
+      "description": "This is a satirical news website. All articles are AI-generated parodies inspired by real headlines."
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- Satire Disclaimer Banner -->
+  <div class="disclaimer-bar" id="disclaimer-bar">
+    <div class="container">
+      <span>⚠️ <strong>SATIRE & PARODY</strong> — This is a humor website. All articles are fictional, AI-generated parodies inspired by real headlines. Nothing here is real journalism.</span>
+      <button class="disclaimer-close" id="disclaimer-close" aria-label="Close disclaimer">✕</button>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container">
+      <div class="header-top">
+        <div class="header-meta">
+          <span class="header-date" id="header-date"></span>
+          <span class="header-tagline">100% AI-Generated Satire</span>
+        </div>
+      </div>
+      <div class="header-brand">
+        <a href="/" class="logo">
+          <span class="logo-icon">🔥</span>
+          <div class="logo-text">
+            <h1 class="logo-title">The Daily Roast</h1>
+            <p class="logo-subtitle">Real Headlines. Unreal Stories.</p>
+          </div>
+        </a>
+      </div>
+      <nav class="main-nav" id="main-nav">
+        <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+          <span></span><span></span><span></span>
+        </button>
+        <ul class="nav-list" id="nav-list">
+          <li><a href="/" class="nav-link active" data-category="all">All Stories</a></li>
+          <li><a href="?cat=politics" class="nav-link" data-category="politics">🏛️ Politics</a></li>
+          <li><a href="?cat=technology" class="nav-link" data-category="technology">💻 Technology</a></li>
+          <li><a href="?cat=business" class="nav-link" data-category="business">💼 Business</a></li>
+          <li><a href="?cat=science" class="nav-link" data-category="science">🔬 Science</a></li>
+          <li><a href="?cat=entertainment" class="nav-link" data-category="entertainment">🎬 Entertainment</a></li>
+          <li><a href="?cat=sports" class="nav-link" data-category="sports">⚽ Sports</a></li>
+          <li><a href="?cat=world" class="nav-link" data-category="world">🌍 World</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Breaking News Ticker -->
+  <div class="ticker-wrap">
+    <div class="ticker">
+      <div class="ticker-label">🔴 BREAKING</div>
+      <div class="ticker-content" id="ticker-content">
+        <span>Loading today's most roasted headlines...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="site-main">
+    <div class="container">
+      
+      <!-- Featured Article -->
+      <section class="featured-section" id="featured-section">
+        <div class="featured-skeleton skeleton-loading">
+          <div class="skeleton-image"></div>
+          <div class="skeleton-text">
+            <div class="skeleton-line w80"></div>
+            <div class="skeleton-line w60"></div>
+            <div class="skeleton-line w90"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Article Grid -->
+      <section class="articles-section">
+        <div class="section-header">
+          <h2 class="section-title" id="section-title">Latest Roasts</h2>
+          <div class="section-line"></div>
+        </div>
+        <div class="articles-grid" id="articles-grid">
+          <!-- Skeleton loaders -->
+          <div class="article-card skeleton-loading"><div class="skeleton-card-image"></div><div class="skeleton-card-text"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w40"></div></div></div>
+          <div class="article-card skeleton-loading"><div class="skeleton-card-image"></div><div class="skeleton-card-text"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w40"></div></div></div>
+          <div class="article-card skeleton-loading"><div class="skeleton-card-image"></div><div class="skeleton-card-text"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w40"></div></div></div>
+          <div class="article-card skeleton-loading"><div class="skeleton-card-image"></div><div class="skeleton-card-text"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w40"></div></div></div>
+          <div class="article-card skeleton-loading"><div class="skeleton-card-image"></div><div class="skeleton-card-text"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w40"></div></div></div>
+          <div class="article-card skeleton-loading"><div class="skeleton-card-image"></div><div class="skeleton-card-text"><div class="skeleton-line w60"></div><div class="skeleton-line w90"></div><div class="skeleton-line w40"></div></div></div>
+        </div>
+        
+        <!-- Load More -->
+        <div class="load-more-wrap" id="load-more-wrap" style="display:none;">
+          <button class="btn btn-outline" id="load-more-btn">Load More Roasts</button>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="empty-state" style="display:none;">
+          <span class="empty-icon">🔥</span>
+          <h3>No roasts cooking yet</h3>
+          <p>Our AI writers are busy crafting the next batch of satirical masterpieces. Check back soon!</p>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo">🔥 The Daily Roast</div>
+          <p class="footer-desc">An AI-powered satirical news website. We take the day's biggest headlines and give them the comedic roasting they deserve. Every article is generated by artificial intelligence for your entertainment.</p>
+        </div>
+        <div class="footer-links">
+          <h4>Categories</h4>
+          <ul>
+            <li><a href="?cat=politics">Politics</a></li>
+            <li><a href="?cat=technology">Technology</a></li>
+            <li><a href="?cat=business">Business</a></li>
+            <li><a href="?cat=science">Science</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>More</h4>
+          <ul>
+            <li><a href="?cat=entertainment">Entertainment</a></li>
+            <li><a href="?cat=sports">Sports</a></li>
+            <li><a href="?cat=world">World</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-disclaimer">
+          <p><strong>⚠️ Disclaimer:</strong> The Daily Roast is a <strong>satirical and parody</strong> publication. All articles are <strong>entirely fictional</strong> and generated by AI. Any resemblance to actual events is used purely as inspiration for comedy. We are not a real news source. Please do not cite us in your thesis.</p>
+        </div>
+        <p class="footer-copy">&copy; <span id="footer-year"></span> The Daily Roast. Powered by AI, fueled by absurdity.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

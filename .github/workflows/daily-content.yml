@@ -1,0 +1,57 @@
+name: The Daily Roast — Content Pipeline
+
+on:
+  # Run once daily at 8:00 AM UTC (adjust to your timezone)
+  schedule:
+    - cron: '0 8 * * *'
+
+  # Manual trigger from GitHub Actions tab
+  workflow_dispatch:
+    inputs:
+      article_count:
+        description: 'Number of articles (0 = all found topics)'
+        required: false
+        default: '0'
+      clean_first:
+        description: 'Delete existing articles before generating?'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  generate-articles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180  # 3 hours max for all articles
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate satirical articles
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ARTICLES_COUNT: ${{ github.event.inputs.article_count || '0' }}
+        run: |
+          if [ "${{ github.event.inputs.clean_first }}" = "true" ]; then
+            echo "🧹 Clean mode — deleting old articles first"
+            node scripts/clean-and-generate.mjs
+          else
+            node scripts/generate-articles.mjs
+          fi
+
+      - name: Report status
+        if: always()
+        run: |
+          echo "📅 Generation completed at $(date -u)"
+          echo "🔥 The Daily Roast content pipeline finished"
