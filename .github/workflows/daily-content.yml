@@ -1,4 +1,4 @@
-name: The Daily Roast — Content Pipeline
+name: Daily Roast Pipeline
 
 on:
   # Run once daily at 8:00 AM UTC (adjust to your timezone)
