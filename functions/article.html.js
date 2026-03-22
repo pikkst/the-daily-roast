@@ -28,6 +28,10 @@ export async function onRequest(context) {
   const response = await context.next();
   let html = await response.text();
 
+  // Build new headers with correct Content-Type
+  const headers = new Headers(response.headers);
+  headers.set('Content-Type', 'text/html; charset=utf-8');
+
   try {
     // Fetch article data from Supabase REST API
     const apiRes = await fetch(
@@ -43,9 +47,7 @@ export async function onRequest(context) {
     const articles = await apiRes.json();
 
     if (!articles || !articles[0]) {
-      return new Response(html, {
-        headers: response.headers,
-      });
+      return new Response(html, { status: 200, headers });
     }
 
     const article = articles[0];
@@ -97,14 +99,10 @@ export async function onRequest(context) {
       `${ogImageTag}\n  <meta property="og:url" content="${escapeHtml(articleUrl)}">\n  <meta property="og:site_name" content="The Daily Roast">\n  <meta name="twitter:image" content="${escapeHtml(image)}">`
     );
 
-    return new Response(html, {
-      headers: response.headers,
-    });
+    return new Response(html, { status: 200, headers });
   } catch (err) {
     // On error, return unmodified HTML
     console.error('OG injection error:', err);
-    return new Response(html, {
-      headers: response.headers,
-    });
+    return new Response(html, { status: 200, headers });
   }
 }
