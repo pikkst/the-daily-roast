@@ -65,14 +65,14 @@
     modal.innerHTML = `
       <div style="background:var(--color-surface,#fff);border-radius:16px;padding:32px;max-width:400px;text-align:center;margin:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
         <div style="font-size:3rem;margin-bottom:12px;">🚧</div>
-        <h3 style="font-size:1.2rem;margin-bottom:8px;color:var(--text-primary,#000);">Makse süsteem seadistamisel</h3>
+        <h3 style="font-size:1.2rem;margin-bottom:8px;color:var(--text-primary,#000);">Payment System Coming Soon</h3>
         <p style="color:var(--text-secondary,#666);font-size:0.9rem;line-height:1.5;margin-bottom:20px;">
-          Stripe annetus (€${amount}/kuu) on peagi saadaval!<br>
-          Vahepeal saad meid toetada otse.
+          Stripe donations (€${amount}/mo) will be available soon!<br>
+          Stay tuned.
         </p>
         <button onclick="this.closest('div').parentElement.remove()" 
                 style="background:var(--color-primary,#e63946);color:white;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-weight:600;">
-          Selge 👍
+          Got it 👍
         </button>
       </div>
     `;
@@ -89,7 +89,7 @@
     if (!email) return;
 
     const submitBtn = form.querySelector('.newsletter-submit, button[type="submit"]');
-    const originalText = submitBtn ? submitBtn.textContent : 'Liitu';
+    const originalText = submitBtn ? submitBtn.textContent : 'Subscribe';
     
     if (submitBtn) {
       submitBtn.disabled = true;
@@ -109,17 +109,17 @@
       if (error) {
         // Duplicate email
         if (error.code === '23505' || error.message.includes('duplicate')) {
-          showMessage(messageEl, 'Oled juba liitunud! 🎉', 'success');
+          showMessage(messageEl, 'You\'re already subscribed! 🎉', 'success');
         } else {
           throw error;
         }
       } else {
-        showMessage(messageEl, 'Aitäh liitumise eest! 🔥📬', 'success');
+        showMessage(messageEl, 'Thanks for subscribing! 🔥📬', 'success');
         emailInput.value = '';
       }
     } catch (err) {
       console.error('Newsletter error:', err);
-      showMessage(messageEl, 'Midagi läks valesti. Proovi uuesti!', 'error');
+      showMessage(messageEl, 'Something went wrong. Please try again!', 'error');
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
@@ -183,7 +183,7 @@
   function showDonationSuccess() {
     const toast = document.createElement('div');
     toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;background:#2a9d8f;color:white;padding:16px 24px;border-radius:12px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.2);animation:fadeInUp 0.5s ease;';
-    toast.innerHTML = '🎉 Aitäh toetuse eest! Sa oled legend! 🔥';
+    toast.innerHTML = '🎉 Thanks for your support! You\'re a legend! 🔥';
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 5000);
   }
