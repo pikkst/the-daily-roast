@@ -14,13 +14,18 @@
     if (initialized) return;
     initialized = true;
 
-    // Get slug from hash: article.html#my-article-slug
-    let slug = window.location.hash ? window.location.hash.slice(1) : null;
+    // Get slug from query parameter ?slug=xxx
+    const params = new URLSearchParams(window.location.search);
+    let slug = params.get('slug');
 
-    // Fallback: try query parameter ?slug=xxx
-    if (!slug) {
-      const params = new URLSearchParams(window.location.search);
-      slug = params.get('slug');
+    // Fallback: support old hash URLs (article.html#slug) and redirect
+    if (!slug && window.location.hash) {
+      slug = window.location.hash.slice(1);
+      if (slug) {
+        // Redirect to query param URL for proper OG tags
+        window.location.replace(`article.html?slug=${slug}`);
+        return;
+      }
     }
 
     console.log('[Daily Roast] slug:', slug);
@@ -201,7 +206,9 @@
   }
 
   function setupShare(article) {
-    const url = window.location.href;
+    // Build canonical URL with query param (not hash) so social crawlers can read OG tags
+    const slug = new URLSearchParams(window.location.search).get('slug') || article.slug;
+    const url = `${window.location.origin}/article.html?slug=${slug}`;
     const title = encodeURIComponent(article.title);
     const text = encodeURIComponent(article.excerpt);
 
@@ -409,7 +416,7 @@
 
     return `
       <div class="article-card">
-        <a href="article.html#${article.slug}">
+        <a href="article.html?slug=${article.slug}">
           <div class="card-image">
             <span class="card-category" style="background: ${catColor};">${article.category_name || 'News'}</span>
             ${article.image_url
