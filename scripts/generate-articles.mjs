@@ -17,9 +17,14 @@ import { GoogleGenAI } from '@google/genai';
 
 // ---------- Configuration ----------
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyCBcS93oGhtwDfskBakM73ZMMf5UpE-mjw';
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://pbwswrieljqfshnjulzs.supabase.co';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+if (!GEMINI_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  console.error('❌ Missing required environment variables: GEMINI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY');
+  process.exit(1);
+}
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
