@@ -34,6 +34,7 @@
     // Load content
     loadFeatured();
     loadArticles();
+    loadTrending();
     setupLoadMore();
   }
 
@@ -228,6 +229,47 @@
       }
     } catch (err) {
       console.error('Error updating ticker:', err);
+    }
+  }
+
+  // ---------- Trending / Most Roasted ----------
+
+  async function loadTrending() {
+    const section = document.getElementById('trending-section');
+    const bar = document.getElementById('trending-bar');
+    if (!section || !bar) return;
+
+    const db = getSupabase();
+    if (!db) return;
+
+    try {
+      const { data, error } = await db
+        .from('articles_with_category')
+        .select('*')
+        .order('views', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        bar.innerHTML = data.map((article, i) => {
+          const catColor = article.category_color || '#e63946';
+          return `
+            <a href="article.html#${article.slug}" class="trending-item">
+              <span class="trending-rank">#${i + 1}</span>
+              <div class="trending-info">
+                <span class="trending-category" style="color: ${catColor};">${getCategoryIcon(article.category_slug)} ${article.category_name || 'News'}</span>
+                <h4 class="trending-title">${article.title}</h4>
+                <span class="trending-views">${(article.views || 0).toLocaleString()} views · ${timeAgo(article.created_at)}</span>
+              </div>
+              ${article.image_url ? `<img class="trending-thumb" src="${article.image_url}" alt="">` : ''}
+            </a>
+          `;
+        }).join('');
+        section.style.display = 'block';
+      }
+    } catch (err) {
+      console.error('Error loading trending:', err);
     }
   }
 

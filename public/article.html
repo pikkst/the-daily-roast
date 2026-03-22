@@ -48,7 +48,10 @@
             <h1 class="logo-title logo-title--small">The Daily Roast</h1>
           </div>
         </a>
-        <a href="/" class="back-link">← Back to Headlines</a>
+        <div class="header-links">
+          <a href="/" class="back-link">← Back to Headlines</a>
+          <a href="quiz.html" class="back-link">🎮 Quiz</a>
+        </div>
       </div>
     </div>
   </header>
@@ -117,6 +120,38 @@
 
           <!-- Tags -->
           <div class="article-tags" id="article-tags"></div>
+
+          <!-- Reaction Buttons -->
+          <div class="article-reactions" id="article-reactions" style="display:none;">
+            <span class="reactions-label">How'd this roast hit? 🎯</span>
+            <div class="reaction-buttons" id="reaction-buttons">
+              <button class="reaction-btn" data-type="fire" aria-label="Fire">
+                <span class="reaction-emoji">🔥</span>
+                <span class="reaction-label-text">Fire</span>
+                <span class="reaction-count" id="count-fire">0</span>
+              </button>
+              <button class="reaction-btn" data-type="skull" aria-label="I'm Dead">
+                <span class="reaction-emoji">💀</span>
+                <span class="reaction-label-text">Dead</span>
+                <span class="reaction-count" id="count-skull">0</span>
+              </button>
+              <button class="reaction-btn" data-type="laugh" aria-label="Hilarious">
+                <span class="reaction-emoji">🤣</span>
+                <span class="reaction-label-text">LOL</span>
+                <span class="reaction-count" id="count-laugh">0</span>
+              </button>
+              <button class="reaction-btn" data-type="shock" aria-label="Shocking">
+                <span class="reaction-emoji">😱</span>
+                <span class="reaction-label-text">Shock</span>
+                <span class="reaction-count" id="count-shock">0</span>
+              </button>
+              <button class="reaction-btn" data-type="cap" aria-label="Cap / No way">
+                <span class="reaction-emoji">🧢</span>
+                <span class="reaction-label-text">Cap</span>
+                <span class="reaction-count" id="count-cap">0</span>
+              </button>
+            </div>
+          </div>
 
           <!-- Share Buttons -->
           <div class="article-share">

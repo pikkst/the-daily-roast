@@ -163,6 +163,9 @@
     // Share buttons
     setupShare(article);
 
+    // Reactions
+    setupReactions(article);
+
     // Schema.org structured data
     updateSchema(article);
   }
@@ -253,6 +256,92 @@
         }
       });
     }
+  }
+
+  // ---------- Reactions ----------
+
+  function getSessionId() {
+    let sid = localStorage.getItem('roast_session_id');
+    if (!sid) {
+      sid = 'sess_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem('roast_session_id', sid);
+    }
+    return sid;
+  }
+
+  function getUserReactions(articleId) {
+    try {
+      const data = JSON.parse(localStorage.getItem('roast_reactions') || '{}');
+      return data[articleId] || [];
+    } catch { return []; }
+  }
+
+  function saveUserReaction(articleId, type) {
+    try {
+      const data = JSON.parse(localStorage.getItem('roast_reactions') || '{}');
+      if (!data[articleId]) data[articleId] = [];
+      if (!data[articleId].includes(type)) data[articleId].push(type);
+      localStorage.setItem('roast_reactions', JSON.stringify(data));
+    } catch {}
+  }
+
+  async function setupReactions(article) {
+    const container = document.getElementById('article-reactions');
+    if (!container) return;
+    container.style.display = '';
+
+    const db = getSupabase();
+    if (!db) return;
+
+    const sessionId = getSessionId();
+    const userReactions = getUserReactions(article.id);
+
+    // Load current counts
+    try {
+      const { data } = await db.rpc('get_reaction_counts', { article_uuid: article.id });
+      if (data) {
+        data.forEach(r => {
+          const el = document.getElementById('count-' + r.reaction_type);
+          if (el) el.textContent = r.count;
+        });
+      }
+    } catch (err) {
+      console.error('Error loading reactions:', err);
+    }
+
+    // Mark already-reacted buttons
+    userReactions.forEach(type => {
+      const btn = document.querySelector(`.reaction-btn[data-type="${type}"]`);
+      if (btn) btn.classList.add('reacted');
+    });
+
+    // Click handlers
+    document.querySelectorAll('.reaction-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const type = btn.dataset.type;
+        if (btn.classList.contains('reacted')) return; // already reacted
+
+        btn.classList.add('reacted', 'reaction-pop');
+        saveUserReaction(article.id, type);
+
+        // Optimistic count update
+        const countEl = document.getElementById('count-' + type);
+        if (countEl) countEl.textContent = parseInt(countEl.textContent || '0') + 1;
+
+        try {
+          await db.from('article_reactions').upsert({
+            article_id: article.id,
+            reaction_type: type,
+            session_id: sessionId
+          }, { onConflict: 'article_id,reaction_type,session_id' });
+        } catch (err) {
+          console.error('Error saving reaction:', err);
+        }
+
+        // Remove pop animation
+        setTimeout(() => btn.classList.remove('reaction-pop'), 400);
+      });
+    });
   }
 
   async function loadRelated(categoryId, currentId) {

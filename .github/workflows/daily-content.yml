@@ -47,6 +47,7 @@ jobs:
             echo "🧹 Clean mode — deleting old articles first"
             node scripts/clean-and-generate.mjs
           else
+            echo "➕ Incremental mode — adding new topics, keeping old articles"
             node scripts/generate-articles.mjs
           fi
 

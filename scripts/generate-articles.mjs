@@ -286,25 +286,26 @@ async function filterNewTopics(db, headlines) {
   console.log('🔍 Checking which topics are new...\n');
   
   try {
-    // Get recent source headlines from generation log
-    const { data: recentLogs } = await db
+    // Get ALL source headlines from generation log (not just 72h)
+    const { data: allLogs } = await db
       .from('generation_log')
       .select('source_headline')
-      .gte('generated_at', new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()) // Last 72 hours
-      .order('generated_at', { ascending: false });
+      .order('generated_at', { ascending: false })
+      .limit(2000);
 
     const coveredHeadlines = new Set(
-      (recentLogs || []).map(l => l.source_headline.toLowerCase())
+      (allLogs || []).map(l => l.source_headline.toLowerCase())
     );
 
-    // Also check existing article titles for similarity
-    const { data: recentArticles } = await db
+    // Also check ALL existing article titles + source headlines for similarity
+    const { data: allArticles } = await db
       .from('articles')
       .select('title, source_headline')
-      .gte('created_at', new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString());
+      .limit(2000);
 
-    (recentArticles || []).forEach(a => {
+    (allArticles || []).forEach(a => {
       if (a.source_headline) coveredHeadlines.add(a.source_headline.toLowerCase());
+      if (a.title) coveredHeadlines.add(a.title.toLowerCase());
     });
 
     const newHeadlines = headlines.filter(h => {
