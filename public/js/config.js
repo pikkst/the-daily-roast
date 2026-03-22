@@ -7,6 +7,20 @@ const CONFIG = {
   SUPABASE_URL: 'https://pbwswrieljqfshnjulzs.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBid3N3cmllbGpxZnNobmp1bHpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNzg5ODQsImV4cCI6MjA4OTc1NDk4NH0.buK75E84SRp-By6XCsKgMFnl31nNgj5cZV7e3lEkIiI',
   
+  // Stripe (replace with your live keys & price IDs from Stripe Dashboard)
+  STRIPE_PUBLISHABLE_KEY: '', // pk_live_... or pk_test_...
+  STRIPE_PRICES: {
+    monthly_2:  '', // price_xxx from Stripe Dashboard (€2/month)
+    monthly_5:  '', // price_xxx from Stripe Dashboard (€5/month)
+    monthly_10: ''  // price_xxx from Stripe Dashboard (€10/month)
+  },
+  // OR: Use Stripe Payment Links (simpler, no Stripe.js needed)
+  STRIPE_PAYMENT_LINKS: {
+    monthly_2:  '', // https://buy.stripe.com/xxx
+    monthly_5:  '', // https://buy.stripe.com/xxx
+    monthly_10: ''  // https://buy.stripe.com/xxx
+  },
+  
   // Site
   SITE_NAME: 'The Daily Roast',
   SITE_TAGLINE: 'Real Headlines. Unreal Stories.',

@@ -161,6 +161,30 @@
   <!-- Footer -->
   <footer class="site-footer">
     <div class="container">
+      <!-- Support & Newsletter in Footer -->
+      <div class="footer-support">
+        <div class="footer-donation">
+          <h4>☕ Toeta The Daily Roasti</h4>
+          <p>Serverid ja AI maksavad pärisraha. Igakuine annetus aitab meid elus hoida!</p>
+          <div class="footer-donation-btns">
+            <button class="donation-btn donation-btn--sm" data-tier="monthly_2" data-amount="2">€2/kuu</button>
+            <button class="donation-btn donation-btn--sm donation-btn--popular" data-tier="monthly_5" data-amount="5">€5/kuu ⭐</button>
+            <button class="donation-btn donation-btn--sm" data-tier="monthly_10" data-amount="10">€10/kuu</button>
+          </div>
+        </div>
+        <div class="footer-newsletter">
+          <h4>📬 Uudiskiri</h4>
+          <p>Parimad roastid kord nädalas postkasti!</p>
+          <form class="newsletter-form" id="footer-newsletter-form">
+            <div class="newsletter-input-wrap">
+              <input type="email" class="newsletter-input" id="footer-newsletter-email" placeholder="sinu@email.ee" required autocomplete="email">
+              <button type="submit" class="newsletter-submit">Liitu</button>
+            </div>
+            <div class="newsletter-message" id="footer-newsletter-message" style="display:none;"></div>
+          </form>
+        </div>
+      </div>
+
       <div class="footer-grid">
         <div class="footer-brand">
           <div class="footer-logo">🔥 The Daily Roast</div>
@@ -197,5 +221,6 @@
   <!-- Scripts -->
   <script src="js/config.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/support.js"></script>
 </body>
 </html>
