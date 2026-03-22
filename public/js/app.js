@@ -223,7 +223,7 @@
 
       if (data && data.length > 0) {
         const headlines = data.map(a => 
-          `<a href="article.html?slug=${a.slug}" style="color:white;text-decoration:none;">${a.title}</a>`
+          `<a href="/article?slug=${a.slug}" style="color:white;text-decoration:none;">${a.title}</a>`
         ).join(' &nbsp;&nbsp;🔥&nbsp;&nbsp; ');
         tickerEl.innerHTML = `<span>${headlines}</span>`;
       }
@@ -255,7 +255,7 @@
         bar.innerHTML = data.map((article, i) => {
           const catColor = article.category_color || '#e63946';
           return `
-            <a href="article.html?slug=${article.slug}" class="trending-item">
+            <a href="/article?slug=${article.slug}" class="trending-item">
               <span class="trending-rank">#${i + 1}</span>
               <div class="trending-info">
                 <span class="trending-category" style="color: ${catColor};">${getCategoryIcon(article.category_slug)} ${article.category_name || 'News'}</span>
@@ -283,7 +283,7 @@
     const gradient = getCategoryColor(catSlug);
 
     return `
-      <a href="article.html?slug=${article.slug}" class="featured-article" data-slug="${article.slug}">
+      <a href="/article?slug=${article.slug}" class="featured-article" data-slug="${article.slug}">
         <div class="featured-image">
           ${article.image_url 
             ? `<img src="${imageUrl}" alt="${article.image_alt || article.title}" loading="lazy">`
@@ -318,7 +318,7 @@
 
     return `
       <div class="article-card">
-        <a href="article.html?slug=${article.slug}">
+        <a href="/article?slug=${article.slug}">
           <div class="card-image">
             <span class="card-category" style="background: ${catColor};">${article.category_name || 'News'}</span>
             ${article.image_url

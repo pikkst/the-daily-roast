@@ -22,8 +22,8 @@
     if (!slug && window.location.hash) {
       slug = window.location.hash.slice(1);
       if (slug) {
-        // Redirect to query param URL for proper OG tags
-        window.location.replace(`article.html?slug=${slug}`);
+        // Redirect to clean URL for proper OG tags
+        window.location.replace(`/article?slug=${slug}`);
         return;
       }
     }
@@ -208,7 +208,7 @@
   function setupShare(article) {
     // Build canonical URL with query param (not hash) so social crawlers can read OG tags
     const slug = new URLSearchParams(window.location.search).get('slug') || article.slug;
-    const url = `${window.location.origin}/article.html?slug=${slug}`;
+    const url = `${window.location.origin}/article?slug=${slug}`;
     const title = encodeURIComponent(article.title);
     const text = encodeURIComponent(article.excerpt);
 
@@ -416,7 +416,7 @@
 
     return `
       <div class="article-card">
-        <a href="article.html?slug=${article.slug}">
+        <a href="/article?slug=${article.slug}">
           <div class="card-image">
             <span class="card-category" style="background: ${catColor};">${article.category_name || 'News'}</span>
             ${article.image_url

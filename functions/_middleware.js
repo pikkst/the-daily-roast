@@ -19,8 +19,9 @@ function escapeHtml(str) {
 export async function onRequest(context) {
   const url = new URL(context.request.url);
 
-  // Only intercept article.html requests with a slug parameter
-  if (!url.pathname.endsWith('/article.html') || !url.searchParams.get('slug')) {
+  // Only intercept article page requests with a slug parameter
+  // Cloudflare Pages strips .html, so the path is /article (not /article.html)
+  if (!(url.pathname === '/article' || url.pathname.endsWith('/article.html')) || !url.searchParams.get('slug')) {
     return context.next();
   }
 
@@ -64,7 +65,7 @@ export async function onRequest(context) {
     }
 
     const article = articles[0];
-    const articleUrl = `${url.origin}/article.html?slug=${encodeURIComponent(slug)}`;
+    const articleUrl = `${url.origin}/article?slug=${encodeURIComponent(slug)}`;
     const title = escapeHtml(article.title);
     const description = escapeHtml(article.meta_description || article.excerpt);
     const image = article.image_url || `https://picsum.photos/seed/${slug}/1200/630`;
