@@ -921,7 +921,28 @@ button {
 .share-btn--twitter:hover { background: #1da1f2; color: white; }
 .share-btn--facebook:hover { background: #4267B2; color: white; }
 .share-btn--reddit:hover { background: #ff4500; color: white; }
+.share-btn--whatsapp:hover { background: #25D366; color: white; }
+.share-btn--telegram:hover { background: #0088cc; color: white; }
+.share-btn--linkedin:hover { background: #0A66C2; color: white; }
+.share-btn--email:hover { background: #6c757d; color: white; }
 .share-btn--copy:hover { background: var(--color-primary); color: white; }
+.share-btn--native:hover { background: var(--color-primary); color: white; }
+
+.share-buttons { flex-wrap: wrap; }
+
+.share-btn--copy .copied-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: 0.7rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+}
 
 /* Related Section */
 .related-section {

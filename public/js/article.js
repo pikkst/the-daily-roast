@@ -195,17 +195,61 @@
       });
     }
 
+    const whatsappBtn = document.getElementById('share-whatsapp');
+    if (whatsappBtn) {
+      whatsappBtn.addEventListener('click', () => {
+        window.open(`https://api.whatsapp.com/send?text=${title}%20${encodeURIComponent(url)}`, '_blank');
+      });
+    }
+
+    const telegramBtn = document.getElementById('share-telegram');
+    if (telegramBtn) {
+      telegramBtn.addEventListener('click', () => {
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${title}`, '_blank', 'width=600,height=400');
+      });
+    }
+
+    const linkedinBtn = document.getElementById('share-linkedin');
+    if (linkedinBtn) {
+      linkedinBtn.addEventListener('click', () => {
+        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank', 'width=600,height=400');
+      });
+    }
+
+    const emailBtn = document.getElementById('share-email');
+    if (emailBtn) {
+      emailBtn.addEventListener('click', () => {
+        window.location.href = `mailto:?subject=${title}&body=Check%20out%20this%20hilarious%20satirical%20article:%20${encodeURIComponent(url)}`;
+      });
+    }
+
     if (copyBtn) {
       copyBtn.addEventListener('click', async () => {
         try {
           await navigator.clipboard.writeText(url);
-          copyBtn.innerHTML = '<span style="font-size:14px;">✓</span>';
+          copyBtn.innerHTML = '<span style="font-size:14px;">✓ Copied!</span>';
           setTimeout(() => {
             copyBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
           }, 2000);
         } catch (e) {
-          // Fallback
           prompt('Copy this link:', url);
+        }
+      });
+    }
+
+    // Native Web Share API (mobile)
+    const nativeBtn = document.getElementById('share-native');
+    if (nativeBtn && navigator.share) {
+      nativeBtn.style.display = 'flex';
+      nativeBtn.addEventListener('click', async () => {
+        try {
+          await navigator.share({
+            title: article.title,
+            text: article.excerpt,
+            url: url
+          });
+        } catch (e) {
+          // User cancelled or error — ignore
         }
       });
     }
