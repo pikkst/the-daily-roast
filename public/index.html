@@ -110,6 +110,7 @@
           <li><a href="?cat=sports" class="nav-link" data-category="sports">⚽ Sports</a></li>
           <li><a href="?cat=world" class="nav-link" data-category="world">🌍 World</a></li>
           <li><a href="quiz.html" class="nav-link nav-link--quiz">🎮 Roast or Real?</a></li>
+          <li><a href="radio.html" class="nav-link nav-link--radio">📻 Radio</a></li>
         </ul>
       </nav>
     </div>
@@ -121,6 +122,38 @@
       <div class="ticker-label">🔴 BREAKING</div>
       <div class="ticker-content" id="ticker-content">
         <span>Loading today's most roasted headlines...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mini Radio Player -->
+  <div class="mini-player" id="mini-player" style="display:none;">
+    <div class="container">
+      <div class="mini-player-inner">
+        <div class="mini-player-left">
+          <div class="mini-player-badge">
+            <span class="mini-player-dot"></span>
+            <span>📻 DAILY ROAST RADIO</span>
+          </div>
+          <div class="mini-player-title" id="mini-player-title">Today's Broadcast</div>
+        </div>
+        <div class="mini-player-center">
+          <button class="mini-player-play" id="mini-player-play" title="Play/Pause">
+            <svg id="mini-play-icon" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><polygon points="5,3 19,12 5,21"/></svg>
+            <svg id="mini-pause-icon" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="display:none;"><rect x="5" y="3" width="4" height="18"/><rect x="15" y="3" width="4" height="18"/></svg>
+          </button>
+          <div class="mini-player-progress" id="mini-player-progress">
+            <div class="mini-player-progress-fill" id="mini-player-progress-fill"></div>
+          </div>
+          <span class="mini-player-time" id="mini-player-time">0:00</span>
+        </div>
+        <div class="mini-player-right">
+          <div class="mini-player-cats" id="mini-player-cats"></div>
+          <a href="radio.html" class="mini-player-expand" title="Open full player">↗</a>
+          <div class="mini-player-share">
+            <button class="mini-player-share-btn" id="mini-player-share" title="Share broadcast">🔗</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -245,6 +278,7 @@
   <!-- Scripts -->
   <script src="js/config.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/mini-player.js"></script>
   <script src="js/support.js"></script>
   <script>
     if ('serviceWorker' in navigator) {

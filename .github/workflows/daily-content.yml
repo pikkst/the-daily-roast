@@ -51,6 +51,15 @@ jobs:
             node scripts/generate-articles.mjs
           fi
 
+      - name: Generate radio broadcast
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          echo "📻 Generating Daily Roast Radio broadcast..."
+          node scripts/generate-broadcast.mjs
+
       - name: Report status
         if: always()
         run: |

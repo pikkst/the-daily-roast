@@ -29,7 +29,8 @@ async function handleSitemap(url) {
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>${origin}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
-  <url><loc>${origin}/quiz</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>`;
+  <url><loc>${origin}/quiz</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>${origin}/radio</loc><changefreq>daily</changefreq><priority>0.8</priority></url>`;
 
     for (const cat of CATEGORIES) {
       xml += `\n  <url><loc>${origin}/?cat=${cat}</loc><changefreq>daily</changefreq><priority>0.8</priority></url>`;
@@ -56,6 +57,34 @@ export async function onRequest(context) {
   // --- Dynamic Sitemap ---
   if (url.pathname === '/sitemap.xml' || url.pathname === '/sitemap') {
     return handleSitemap(url);
+  }
+
+  // --- Radio OG injection ---
+  if (url.pathname === '/radio' || url.pathname.endsWith('/radio.html')) {
+    const response = await context.next();
+    const contentType = response.headers.get('Content-Type') || '';
+    if (!contentType.includes('text/html')) return response;
+    let html = await response.text();
+    try {
+      const apiRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/broadcasts?select=title,cover_image_url,created_at&published=eq.true&order=created_at.desc&limit=1`,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+      );
+      const broadcasts = await apiRes.json();
+      if (broadcasts && broadcasts[0]) {
+        const b = broadcasts[0];
+        const title = escapeHtml(b.title || 'Daily Roast Radio');
+        const desc = 'Tune in to today\'s AI comedy broadcast — hosts Joe \u0026 Jane roast the biggest headlines!';
+        const img = b.cover_image_url || 'https://picsum.photos/seed/daily-roast-radio/1200/630';
+        html = html.replace(/<title[^>]*>.*?<\/title>/, `<title>${title}</title>`);
+        html = html.replace(/<meta property="og:title"[^>]*>/, `<meta property="og:title" content="${title}">`);
+        html = html.replace(/<meta property="og:description"[^>]*>/, `<meta property="og:description" content="${desc}">`);
+        html = html.replace(/<meta property="og:image"[^>]*>/, `<meta property="og:image" content="${escapeHtml(img)}">`);
+        html = html.replace(/<meta name="twitter:title"[^>]*>/, `<meta name="twitter:title" content="${title}">`);
+        html = html.replace(/<meta name="twitter:description"[^>]*>/, `<meta name="twitter:description" content="${desc}">`);
+      }
+    } catch (err) { /* ignore */ }
+    return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 
   // --- Article OG injection ---

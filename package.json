@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "generate": "node scripts/generate-articles.mjs",
+    "broadcast": "node scripts/generate-broadcast.mjs",
     "setup-seed": "node scripts/seed-initial.mjs",
     "dev": "npx serve public -l 3000"
   },

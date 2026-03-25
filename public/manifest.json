@@ -35,6 +35,12 @@
       "short_name": "Quiz",
       "url": "/quiz",
       "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Daily Roast Radio",
+      "short_name": "Radio",
+      "url": "/radio",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
     }
   ]
 }

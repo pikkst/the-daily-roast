@@ -1,0 +1,162 @@
+// ============================================
+// The Daily Roast — Mini Radio Player (Homepage)
+// ============================================
+
+(function () {
+  'use strict';
+
+  const BGM_TRACKS = {
+    upbeat:   'https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3',
+    chill:    'https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a7315b.mp3',
+    funky:    'https://cdn.pixabay.com/audio/2022/02/22/audio_d1e871676d.mp3',
+    dramatic: 'https://cdn.pixabay.com/audio/2022/08/04/audio_2dde6a6983.mp3'
+  };
+
+  const CATEGORY_ICONS = {
+    politics: '🏛️', technology: '💻', business: '💼', science: '🔬',
+    entertainment: '🎬', sports: '⚽', world: '🌍'
+  };
+
+  let broadcast = null;
+  let audio = null;
+  let bgm = null;
+  let isPlaying = false;
+
+  window.addEventListener('supabase-ready', init);
+  document.addEventListener('DOMContentLoaded', () => {
+    if (getSupabase()) init();
+  });
+
+  let initialized = false;
+  async function init() {
+    if (initialized) return;
+    initialized = true;
+
+    const db = getSupabase();
+    if (!db) return;
+
+    try {
+      const { data, error } = await db
+        .from('broadcasts')
+        .select('id, title, audio_url, bgm_theme, category_summary, duration_seconds, created_at')
+        .eq('published', true)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+      if (!data || data.length === 0 || !data[0].audio_url) return;
+
+      broadcast = data[0];
+      renderMiniPlayer();
+    } catch (err) {
+      console.error('Mini-player: Error loading broadcast:', err);
+    }
+  }
+
+  function renderMiniPlayer() {
+    const wrapper = document.getElementById('mini-player');
+    const titleEl = document.getElementById('mini-player-title');
+    const catsEl = document.getElementById('mini-player-cats');
+    if (!wrapper) return;
+
+    // Set title
+    if (titleEl) {
+      const date = new Date(broadcast.created_at);
+      const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      titleEl.textContent = `${dateStr} — ${Math.round((broadcast.duration_seconds || 0) / 60)} min show`;
+    }
+
+    // Category icons
+    if (catsEl && broadcast.category_summary) {
+      catsEl.innerHTML = Object.keys(broadcast.category_summary)
+        .map(cat => `<span class="mini-cat" title="${cat}">${CATEGORY_ICONS[cat] || '📰'}</span>`)
+        .join('');
+    }
+
+    // Create audio elements
+    audio = new Audio();
+    audio.preload = 'none';
+    audio.src = broadcast.audio_url;
+
+    bgm = new Audio();
+    bgm.preload = 'none';
+    bgm.loop = true;
+    bgm.volume = 0.25;
+    const bgmTheme = broadcast.bgm_theme || 'upbeat';
+    bgm.src = BGM_TRACKS[bgmTheme] || BGM_TRACKS.upbeat;
+
+    // Setup events
+    setupEvents();
+
+    // Show mini-player
+    wrapper.style.display = 'block';
+  }
+
+  function setupEvents() {
+    const playBtn = document.getElementById('mini-player-play');
+    const shareBtn = document.getElementById('mini-player-share');
+
+    if (playBtn) {
+      playBtn.addEventListener('click', togglePlay);
+    }
+
+    if (shareBtn) {
+      shareBtn.addEventListener('click', () => {
+        const url = window.location.origin + '/radio';
+        navigator.clipboard.writeText(url).then(() => {
+          shareBtn.textContent = '✅';
+          setTimeout(() => { shareBtn.textContent = '🔗'; }, 2000);
+        });
+      });
+    }
+
+    if (audio) {
+      audio.addEventListener('timeupdate', updateProgress);
+      audio.addEventListener('ended', () => {
+        isPlaying = false;
+        updatePlayIcon();
+        bgm.pause();
+      });
+    }
+  }
+
+  async function togglePlay() {
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.pause();
+      bgm.pause();
+      isPlaying = false;
+    } else {
+      try {
+        await audio.play();
+        bgm.play().catch(() => {});
+        isPlaying = true;
+      } catch (err) {
+        console.error('Mini-player playback failed:', err);
+        return;
+      }
+    }
+    updatePlayIcon();
+  }
+
+  function updatePlayIcon() {
+    const playIcon = document.getElementById('mini-play-icon');
+    const pauseIcon = document.getElementById('mini-pause-icon');
+    if (playIcon) playIcon.style.display = isPlaying ? 'none' : 'block';
+    if (pauseIcon) pauseIcon.style.display = isPlaying ? 'block' : 'none';
+  }
+
+  function updateProgress() {
+    if (!audio || !audio.duration) return;
+    const pct = (audio.currentTime / audio.duration) * 100;
+    const fill = document.getElementById('mini-player-progress-fill');
+    const timeEl = document.getElementById('mini-player-time');
+    if (fill) fill.style.width = pct + '%';
+    if (timeEl) {
+      const m = Math.floor(audio.currentTime / 60);
+      const s = Math.floor(audio.currentTime % 60);
+      timeEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+    }
+  }
+})();
