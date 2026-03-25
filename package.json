@@ -6,6 +6,7 @@
   "scripts": {
     "generate": "node scripts/generate-articles.mjs",
     "broadcast": "node scripts/generate-broadcast.mjs",
+    "youtube-upload": "node scripts/upload-latest-broadcast-youtube.mjs",
     "lock-roast": "node scripts/lock-roast-of-the-day.mjs",
     "weekly-top10": "node scripts/generate-weekly-top10.mjs",
     "setup-seed": "node scripts/seed-initial.mjs",
@@ -14,7 +15,8 @@
   "dependencies": {
     "@google/genai": "^1.46.0",
     "@supabase/supabase-js": "^2.39.0",
-    "fast-xml-parser": "^4.3.0"
+    "fast-xml-parser": "^4.3.0",
+    "googleapis": "^144.0.0"
   },
   "devDependencies": {
     "serve": "^14.2.0"

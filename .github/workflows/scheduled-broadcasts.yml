@@ -28,6 +28,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
       - name: Generate broadcast
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -36,6 +41,19 @@ jobs:
         run: |
           echo "📻 Generating scheduled broadcast..."
           node scripts/generate-broadcast.mjs
+
+      - name: Upload latest broadcast to YouTube
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SITE_URL: ${{ secrets.SITE_URL || 'https://the-daily-roast-66e.pages.dev' }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          YT_PRIVACY_STATUS: ${{ vars.YT_PRIVACY_STATUS || 'public' }}
+        run: |
+          echo "🎬 Rendering MP4 and uploading to YouTube..."
+          node scripts/upload-latest-broadcast-youtube.mjs
 
       - name: Report status
         if: always()

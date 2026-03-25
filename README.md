@@ -37,6 +37,9 @@ Then run `scripts/setup-roast-automation.sql` in Supabase SQL Editor to create:
 - `daily_roast_lock` (fixed daily winner snapshot)
 - `weekly_roast_summaries` and `weekly_roast_items` (weekly Top 10)
 
+For YouTube broadcast auto-upload, also run:
+- `scripts/setup-youtube-broadcasts.sql`
+
 ### 2. Local Development
 
 ```bash
@@ -64,6 +67,9 @@ npm run lock-roast
 
 # Generate weekly Top 10 summary
 npm run weekly-top10
+
+# Upload latest broadcast to YouTube (MP4 render + upload)
+npm run youtube-upload
 ```
 
 ### 4. GitHub Repository Setup
@@ -182,6 +188,10 @@ Cloudflare will automatically redeploy whenever you push to the `main` branch.
 | `SUPABASE_URL` | Supabase project URL | Yes |
 | `SUPABASE_SERVICE_KEY` | Supabase service role key | Yes |
 | `ARTICLES_COUNT` | Number of articles per run (default: 5) | No |
+| `YT_CLIENT_ID` | Google OAuth Client ID for YouTube upload | For YouTube upload |
+| `YT_CLIENT_SECRET` | Google OAuth Client Secret | For YouTube upload |
+| `YT_REFRESH_TOKEN` | OAuth refresh token with YouTube upload scope | For YouTube upload |
+| `YT_PRIVACY_STATUS` | `public`, `unlisted`, or `private` | No |
 
 ### Adjusting Generation Schedule
 
@@ -194,6 +204,10 @@ schedule:
 ```
 
 Weekly Top 10 generation runs from `.github/workflows/weekly-top10.yml`.
+
+Broadcast upload to YouTube runs automatically after broadcast generation in:
+- `.github/workflows/daily-content.yml`
+- `.github/workflows/scheduled-broadcasts.yml`
 
 ### Manual Article Generation
 
