@@ -10,6 +10,14 @@ on:
   # Manual trigger from GitHub Actions tab
   workflow_dispatch:
     inputs:
+      run_mode:
+        description: 'Manual run mode'
+        required: false
+        type: choice
+        default: broadcast_only
+        options:
+          - broadcast_only
+          - full_pipeline
       article_count:
         description: 'Number of articles (0 = all found topics)'
         required: false
@@ -63,22 +71,22 @@ jobs:
           fi
 
       - name: Checkout repository
-        if: steps.slot_check.outputs.should_run == 'true'
+        if: steps.slot_check.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.run_mode != 'broadcast_only')
         uses: actions/checkout@v5
 
       - name: Setup Node.js
-        if: steps.slot_check.outputs.should_run == 'true'
+        if: steps.slot_check.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.run_mode != 'broadcast_only')
         uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
-        if: steps.slot_check.outputs.should_run == 'true'
+        if: steps.slot_check.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.run_mode != 'broadcast_only')
         run: npm ci
 
       - name: Generate satirical articles
-        if: steps.slot_check.outputs.should_run == 'true'
+        if: steps.slot_check.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.run_mode != 'broadcast_only')
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -96,6 +104,7 @@ jobs:
       - name: Report status
         if: always()
         run: |
+          echo "🛠️ Manual mode: ${{ github.event.inputs.run_mode || 'n/a' }}"
           echo "⏱️ Slot gate: ${{ steps.slot_check.outputs.should_run }}"
           echo "📅 Generation completed at $(date -u)"
           echo "🔥 The Daily Roast content pipeline finished"
@@ -155,7 +164,7 @@ jobs:
 
   lock-roast-of-the-day:
     needs: generate-articles
-    if: needs.generate-articles.outputs.should_run == 'true'
+    if: needs.generate-articles.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.run_mode != 'broadcast_only')
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
