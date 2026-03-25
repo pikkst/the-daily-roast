@@ -37,8 +37,9 @@ jobs:
             exit 0
           fi
 
+          tallinn_hh="$(TZ=Europe/Tallinn date +%H)"
           tallinn_hhmm="$(TZ=Europe/Tallinn date +%H:%M)"
-          if [ "$tallinn_hhmm" = "09:00" ] || [ "$tallinn_hhmm" = "15:00" ] || [ "$tallinn_hhmm" = "21:00" ]; then
+          if [ "$tallinn_hh" = "09" ] || [ "$tallinn_hh" = "15" ] || [ "$tallinn_hh" = "21" ]; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
             echo "✅ Tallinn slot matched: $tallinn_hhmm"
           else
