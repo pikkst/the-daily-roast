@@ -141,16 +141,52 @@ async function fetchPoltsamaaWeather() {
 }
 
 function injectLiveNotice(script, liveNotice) {
-  const noticeLines = [
-    {
-      speaker: 'Joe',
-      text: `Live update from ${liveNotice.location}: today is ${liveNotice.localDate}, local time ${liveNotice.localTime}.`
-    },
-    {
-      speaker: 'Jane',
-      text: `Current weather in ${liveNotice.location}: ${liveNotice.summary}.`
-    }
-  ];
+  const lowerScript = script
+    .map(line => String(line?.text || '').toLowerCase())
+    .join(' ');
+
+  // Avoid duplicate live notice if model already included it.
+  if (lowerScript.includes('poltsamaa')) {
+    return script;
+  }
+
+  const styleIndex = new Date().getUTCDay() % 3;
+  let noticeLines;
+
+  if (styleIndex === 0) {
+    noticeLines = [
+      {
+        speaker: 'Joe',
+        text: `Quick local check before we dive in: it's ${liveNotice.localDate}, about ${liveNotice.localTime} in ${liveNotice.location}.`
+      },
+      {
+        speaker: 'Jane',
+        text: `Outside in ${liveNotice.location} right now: ${liveNotice.summary}. Basically, dress for drama and keep your coffee close.`
+      }
+    ];
+  } else if (styleIndex === 1) {
+    noticeLines = [
+      {
+        speaker: 'Jane',
+        text: `Live from ${liveNotice.location}: calendar says ${liveNotice.localDate}, the clock says ${liveNotice.localTime}, and yes, we are very much on the air.`
+      },
+      {
+        speaker: 'Joe',
+        text: `Weather desk reports ${liveNotice.summary}. So if your plans involved optimism, maybe reschedule.`
+      }
+    ];
+  } else {
+    noticeLines = [
+      {
+        speaker: 'Joe',
+        text: `Time stamp for the roast: ${liveNotice.localDate}, ${liveNotice.localTime} in ${liveNotice.location}.`
+      },
+      {
+        speaker: 'Jane',
+        text: `And the weather in ${liveNotice.location}: ${liveNotice.summary}. Good conditions for headlines, questionable conditions for hairstyles.`
+      }
+    ];
+  }
 
   const insertAt = Math.min(3, script.length);
   return [
@@ -188,7 +224,45 @@ async function ensureAudioBucket(db) {
 
 // ---------- Step 1: Fetch Latest Articles Per Category ----------
 
-async function fetchArticlesPerCategory(db) {
+async function fetchRecentBroadcastContext(db, hoursBack = 24) {
+  const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
+
+  try {
+    const { data, error } = await db
+      .from('broadcasts')
+      .select('id, title, created_at, article_ids, category_summary')
+      .eq('published', true)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+
+    const broadcasts = data || [];
+    const usedArticleIds = new Set(
+      broadcasts.flatMap(b => Array.isArray(b.article_ids) ? b.article_ids : [])
+    );
+
+    return { broadcasts, usedArticleIds };
+  } catch (err) {
+    console.warn(`  ⚠️  Could not load recent broadcast context: ${err.message}`);
+    return { broadcasts: [], usedArticleIds: new Set() };
+  }
+}
+
+function buildContinuityNotes(recentBroadcasts) {
+  if (!recentBroadcasts || recentBroadcasts.length === 0) {
+    return 'No earlier broadcast context available in the last 24 hours.';
+  }
+
+  return recentBroadcasts.slice(0, 5).map((b, idx) => {
+    const when = new Date(b.created_at).toISOString().slice(11, 16);
+    const topics = Object.values(b.category_summary || {}).slice(0, 3).join(' | ');
+    return `${idx + 1}. [${when} UTC] ${b.title} :: ${topics}`;
+  }).join('\n');
+}
+
+async function fetchArticlesPerCategory(db, usedArticleIds = new Set()) {
   console.log('\n📰 Fetching latest article per category...\n');
 
   const articles = [];
@@ -197,17 +271,23 @@ async function fetchArticlesPerCategory(db) {
     try {
       const { data, error } = await db
         .from('articles_with_category')
-        .select('id, title, excerpt, category_slug, category_name')
+        .select('id, title, excerpt, category_slug, category_name, created_at')
         .eq('category_slug', category)
         .eq('published', true)
         .order('created_at', { ascending: false })
-        .limit(1);
+        .limit(6);
 
       if (error) throw error;
 
       if (data && data.length > 0) {
-        articles.push(data[0]);
-        console.log(`  ${CATEGORY_ICONS[category]} ${category}: "${data[0].title}"`);
+        const freshPick = data.find(a => !usedArticleIds.has(a.id));
+        const selected = freshPick || data[0];
+        articles.push(selected);
+        if (freshPick) {
+          console.log(`  ${CATEGORY_ICONS[category]} ${category}: "${selected.title}"`);
+        } else {
+          console.log(`  ${CATEGORY_ICONS[category]} ${category}: "${selected.title}" (repeat: no fresh item found)`);
+        }
       } else {
         console.log(`  ${CATEGORY_ICONS[category]} ${category}: (no articles found)`);
       }
@@ -222,7 +302,7 @@ async function fetchArticlesPerCategory(db) {
 
 // ---------- Step 2: Generate Comedy Script ----------
 
-async function generateScript(articles, liveNotice, retries = 2) {
+async function generateScript(articles, liveNotice, continuityNotes, retries = 2) {
   console.log('🎙️  Generating comedy radio script...\n');
 
   const articleSummaries = articles.map(a =>
@@ -237,21 +317,19 @@ async function generateScript(articles, liveNotice, retries = 2) {
 TODAY'S STORIES TO COVER (one from each category):
 ${articleSummaries}
 
+EARLIER BROADCAST CONTEXT (last 24h):
+${continuityNotes}
+
 WRITE A COMPLETE RADIO SHOW SCRIPT covering ALL ${articles.length} stories. The show should:
 
 1. **COLD OPEN** — Joe or Jane with a quick one-liner hook that pulls listeners in
 2. **INTRO** — Brief banter between Joe and Jane (who we are, what day it is)
-3. **LIVE NOTICE (MANDATORY)** — right after intro, include a short on-air update that says:
-  - Date: ${liveNotice.localDate}
-  - Time (${TALLINN_TIMEZONE}): ${liveNotice.localTime}
-  - Current weather in ${liveNotice.location}: ${liveNotice.summary}
-  - Keep this update to 2-4 lines in a fun radio tone
-4. **STORY SEGMENTS** — For each of the ${articles.length} stories:
+3. **STORY SEGMENTS** — For each of the ${articles.length} stories:
    - Quick transition/jingle reference (e.g., "Moving on to..." or "And now, from the world of...")
    - Host reads the headline, then both react and riff on it
    - 4-8 lines of dialogue per story with genuine comedy
    - Include at least one fictional "expert quote" or "listener call-in" per story
-5. **WRAP-UP** — Final banter, tease tomorrow's show
+4. **WRAP-UP** — Final banter, tease tomorrow's show
 
 COMEDY STYLE:
 - Deadpan absurdity (treat insane things as normal)
@@ -260,6 +338,11 @@ COMEDY STYLE:
 - Pop culture references and callbacks
 - Running jokes that recur through the show
 - Each line should be ~1-3 sentences (natural speech pacing)
+
+IMPORTANT:
+- Do NOT include date/time/weather bulletin lines. They are inserted automatically after generation.
+- If a headline was already covered earlier today, treat it as a follow-up with a clearly new angle.
+- Avoid reusing the same punchline or setup from earlier broadcasts listed in context.
 
 Also choose a background music theme from: upbeat, chill, funky, dramatic
 
@@ -580,7 +663,9 @@ async function main() {
   await ensureAudioBucket(db);
 
   // Step 1: Fetch 1 article per category
-  const articles = await fetchArticlesPerCategory(db);
+  const recentContext = await fetchRecentBroadcastContext(db, 24);
+  const continuityNotes = buildContinuityNotes(recentContext.broadcasts);
+  const articles = await fetchArticlesPerCategory(db, recentContext.usedArticleIds);
 
   if (articles.length < 3) {
     console.error(`❌ Not enough articles (${articles.length}). Need at least 3 categories. Exiting.`);
@@ -591,7 +676,7 @@ async function main() {
   console.log(`\n${'─'.repeat(60)}`);
   const liveNotice = await fetchPoltsamaaWeather();
   console.log(`🌦️  Live notice: ${liveNotice.localDate}, ${liveNotice.localTime} (${TALLINN_TIMEZONE}) — ${liveNotice.summary}`);
-  const scriptData = await generateScript(articles, liveNotice);
+  const scriptData = await generateScript(articles, liveNotice, continuityNotes);
 
   if (!scriptData) {
     console.error('❌ Script generation failed. Exiting.');

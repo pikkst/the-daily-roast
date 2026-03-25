@@ -84,6 +84,11 @@
           <!-- Category Pills -->
           <div class="radio-categories" id="radio-categories"></div>
           <p class="radio-intro" id="radio-intro">Daily comedy bulletin with hosts Joe & Jane.</p>
+          <div class="radio-schedule" id="radio-schedule">
+            <p class="radio-schedule-times">Uued saated tavaliselt: 09:00, 15:00, 21:00 (Eesti aeg)</p>
+            <p class="radio-next-countdown" id="radio-next-countdown">Next broadcast in --:--:--</p>
+            <p class="radio-pipeline-status" id="radio-pipeline-status">Published</p>
+          </div>
           <div class="radio-install" id="radio-install-wrap" style="display:none;">
             <button class="radio-install-btn" id="radio-install-btn" type="button">Install Radio App</button>
             <p class="radio-install-hint" id="radio-install-hint">Install this radio as an app for quick launch from your home screen.</p>
@@ -143,11 +148,18 @@
         <!-- Share Bar -->
         <div class="radio-share">
           <span class="radio-share-label">Share this broadcast:</span>
+          <a class="radio-share-btn radio-share-btn--download" id="radio-download-btn" title="Download clip" href="#" download>⬇</a>
           <button class="radio-share-btn" data-platform="twitter" title="Share on X">𝕏</button>
           <button class="radio-share-btn" data-platform="facebook" title="Share on Facebook">f</button>
           <button class="radio-share-btn" data-platform="reddit" title="Share on Reddit">r</button>
           <button class="radio-share-btn" data-platform="copy" title="Copy link">🔗</button>
         </div>
+      </section>
+
+      <!-- Broadcast Archive -->
+      <section class="radio-archive" id="radio-archive-section" style="display:none;">
+        <h2 class="radio-archive-title">📚 Recent Broadcasts</h2>
+        <div class="radio-archive-list" id="radio-archive-list"></div>
       </section>
 
       <!-- No Broadcast State -->

@@ -16,8 +16,11 @@
     politics: '🏛️', technology: '💻', business: '💼', science: '🔬',
     entertainment: '🎬', sports: '⚽', world: '🌍'
   };
+  const TALLINN_TZ = 'Europe/Tallinn';
+  const SCHEDULE_HOURS = [9, 15, 21];
 
   let broadcast = null;
+  let broadcasts = [];
   let isPlaying = false;
   let audioCtx = null;
   let analyser = null;
@@ -26,6 +29,9 @@
   let animFrameId = null;
   let visualizerReady = false;
   let deferredInstallPrompt = null;
+  let playerInitialized = false;
+  let shareInitialized = false;
+  let countdownTimer = null;
 
   // DOM refs
   const els = {};
@@ -54,6 +60,11 @@
     els.intro       = document.getElementById('radio-intro');
     els.articlesSection = document.getElementById('radio-articles-section');
     els.articlesGrid = document.getElementById('radio-articles-grid');
+    els.nextCountdown = document.getElementById('radio-next-countdown');
+    els.pipelineStatus = document.getElementById('radio-pipeline-status');
+    els.downloadBtn = document.getElementById('radio-download-btn');
+    els.archiveSection = document.getElementById('radio-archive-section');
+    els.archiveList = document.getElementById('radio-archive-list');
     els.installWrap = document.getElementById('radio-install-wrap');
     els.installBtn = document.getElementById('radio-install-btn');
     els.installHint = document.getElementById('radio-install-hint');
@@ -94,13 +105,16 @@
         .select('*')
         .eq('published', true)
         .order('created_at', { ascending: false })
-        .limit(1);
+        .limit(20);
 
       if (error) throw error;
       if (!data || data.length === 0) return showEmpty();
 
+      broadcasts = data;
       broadcast = data[0];
       renderBroadcast();
+      renderBroadcastArchive();
+      startScheduleTicker();
     } catch (err) {
       console.error('Error loading broadcast:', err);
       showEmpty();
@@ -170,6 +184,15 @@
       els.intro.textContent = `Today's edition features ${storyCount} stories in a ${minutes}-minute comedy bulletin with hosts Joe & Jane.`;
     }
 
+    if (els.downloadBtn) {
+      if (broadcast.audio_url) {
+        els.downloadBtn.href = broadcast.audio_url;
+        els.downloadBtn.setAttribute('download', `${(broadcast.title || 'daily-roast-radio').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.wav`);
+      } else {
+        els.downloadBtn.removeAttribute('href');
+      }
+    }
+
     // Player
     if (broadcast.audio_url) {
       // Needed when piping remote media through WebAudio (visualizer path).
@@ -186,14 +209,21 @@
       els.bgm.volume = 0.25;
       els.bgm.load();
 
-      setupPlayer();
+      if (!playerInitialized) {
+        setupPlayer();
+        playerInitialized = true;
+      }
     }
 
     // Related articles
     renderRelatedArticles();
+    renderScheduleStatus();
 
     // Share buttons
-    setupShare();
+    if (!shareInitialized) {
+      setupShare();
+      shareInitialized = true;
+    }
   }
 
   // ── Player Setup ──
@@ -407,6 +437,115 @@
     } catch (err) {
       console.error('Error loading related articles:', err);
     }
+  }
+
+  function renderBroadcastArchive() {
+    if (!els.archiveList || !Array.isArray(broadcasts) || broadcasts.length === 0) return;
+
+    const rows = broadcasts.map((item, idx) => {
+      const date = new Date(item.created_at);
+      const dateLabel = date.toLocaleDateString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric'
+      });
+      const mins = Math.max(1, Math.round((item.duration_seconds || 0) / 60));
+      const hasAudio = Boolean(item.audio_url);
+
+      return `<div class="radio-archive-item ${idx === 0 ? 'radio-archive-item--active' : ''}" data-broadcast-id="${item.id}">
+        <div class="radio-archive-main">
+          <h3 class="radio-archive-item-title">${escapeHtml(item.title || 'Untitled broadcast')}</h3>
+          <p class="radio-archive-item-meta">${dateLabel} · ${mins} min</p>
+        </div>
+        <div class="radio-archive-actions">
+          <button class="radio-archive-btn" data-action="play" data-id="${item.id}" ${hasAudio ? '' : 'disabled'}>Play</button>
+          <button class="radio-archive-btn" data-action="playlist" data-id="${item.id}">Open playlist</button>
+          <a class="radio-archive-btn radio-archive-btn--link" data-action="download" ${hasAudio ? `href="${item.audio_url}" download` : ''}>Download</a>
+        </div>
+      </div>`;
+    }).join('');
+
+    els.archiveList.innerHTML = rows;
+    els.archiveSection.style.display = 'block';
+
+    els.archiveList.querySelectorAll('[data-action="play"]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const selected = broadcasts.find(b => String(b.id) === String(id));
+        if (!selected) return;
+        broadcast = selected;
+        renderBroadcast();
+        highlightActiveArchive(id);
+        if (broadcast.audio_url) {
+          await startPlayback();
+        }
+      });
+    });
+
+    els.archiveList.querySelectorAll('[data-action="playlist"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const selected = broadcasts.find(b => String(b.id) === String(id));
+        if (!selected) return;
+        broadcast = selected;
+        renderBroadcast();
+        highlightActiveArchive(id);
+        if (els.articlesSection) {
+          els.articlesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  }
+
+  function highlightActiveArchive(id) {
+    if (!els.archiveList) return;
+    els.archiveList.querySelectorAll('.radio-archive-item').forEach(el => {
+      el.classList.toggle('radio-archive-item--active', el.getAttribute('data-broadcast-id') === String(id));
+    });
+  }
+
+  function getTallinnNow() {
+    return new Date(new Date().toLocaleString('en-US', { timeZone: TALLINN_TZ }));
+  }
+
+  function getNextSlot(nowTallinn) {
+    for (const hour of SCHEDULE_HOURS) {
+      const slot = new Date(nowTallinn);
+      slot.setHours(hour, 0, 0, 0);
+      if (slot > nowTallinn) return slot;
+    }
+    const tomorrow = new Date(nowTallinn);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(SCHEDULE_HOURS[0], 0, 0, 0);
+    return tomorrow;
+  }
+
+  function getPipelineLabel(nowTallinn) {
+    const minutesNow = nowTallinn.getHours() * 60 + nowTallinn.getMinutes();
+    const inGeneratingWindow = SCHEDULE_HOURS.some(hour => {
+      const slot = hour * 60;
+      return minutesNow >= (slot - 20) && minutesNow <= (slot + 40);
+    });
+    return inGeneratingWindow ? 'Generating now...' : 'Published';
+  }
+
+  function renderScheduleStatus() {
+    if (!els.nextCountdown || !els.pipelineStatus) return;
+    const nowTallinn = getTallinnNow();
+    const nextSlot = getNextSlot(nowTallinn);
+    const diffMs = Math.max(0, nextSlot.getTime() - nowTallinn.getTime());
+    const totalSeconds = Math.floor(diffMs / 1000);
+    const hh = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+    const mm = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+    const ss = String(totalSeconds % 60).padStart(2, '0');
+
+    els.nextCountdown.textContent = `Next broadcast in ${hh}:${mm}:${ss}`;
+    els.pipelineStatus.textContent = getPipelineLabel(nowTallinn);
+    els.pipelineStatus.classList.toggle('radio-pipeline-status--generating', els.pipelineStatus.textContent === 'Generating now...');
+  }
+
+  function startScheduleTicker() {
+    if (countdownTimer) clearInterval(countdownTimer);
+    renderScheduleStatus();
+    countdownTimer = setInterval(renderScheduleStatus, 1000);
   }
 
   // ── Share ──
