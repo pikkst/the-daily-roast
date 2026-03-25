@@ -56,6 +56,7 @@
   function renderMiniPlayer() {
     const wrapper = document.getElementById('mini-player');
     const titleEl = document.getElementById('mini-player-title');
+    const metaEl = document.getElementById('mini-player-meta');
     const catsEl = document.getElementById('mini-player-cats');
     if (!wrapper) return;
 
@@ -64,6 +65,11 @@
       const date = new Date(broadcast.created_at);
       const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       titleEl.textContent = `${dateStr} — ${Math.round((broadcast.duration_seconds || 0) / 60)} min show`;
+    }
+
+    if (metaEl) {
+      const catCount = Object.keys(broadcast.category_summary || {}).length;
+      metaEl.textContent = `Parody / Fiction Broadcast · ${catCount} stories`; 
     }
 
     // Category icons
