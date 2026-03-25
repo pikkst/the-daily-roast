@@ -51,6 +51,34 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const TALLINN_TIMEZONE = 'Europe/Tallinn';
 const POLTSAMAA = { name: 'Poltsamaa, Estonia', latitude: 58.6525, longitude: 25.9717 };
 
+function getBroadcastEditionContext(now = new Date()) {
+  const tallinnNow = new Date(now.toLocaleString('en-US', { timeZone: TALLINN_TIMEZONE }));
+  const hour = tallinnNow.getHours();
+
+  if (hour < 12) {
+    return {
+      key: 'morning',
+      label: 'Morning Edition',
+      nominalTime: '09:00',
+      styleCue: 'energized start-of-day briefing'
+    };
+  }
+  if (hour < 18) {
+    return {
+      key: 'afternoon',
+      label: 'Afternoon Edition',
+      nominalTime: '15:00',
+      styleCue: 'midday follow-up and update briefing'
+    };
+  }
+  return {
+    key: 'evening',
+    label: 'Evening Edition',
+    nominalTime: '21:00',
+    styleCue: 'end-of-day wrap-up briefing'
+  };
+}
+
 function getWeatherLabel(code) {
   const labels = {
     0: 'clear sky',
@@ -302,7 +330,7 @@ async function fetchArticlesPerCategory(db, usedArticleIds = new Set()) {
 
 // ---------- Step 2: Generate Comedy Script ----------
 
-async function generateScript(articles, liveNotice, continuityNotes, retries = 2) {
+async function generateScript(articles, liveNotice, continuityNotes, edition, retries = 2) {
   console.log('🎙️  Generating comedy radio script...\n');
 
   const articleSummaries = articles.map(a =>
@@ -319,6 +347,10 @@ ${articleSummaries}
 
 EARLIER BROADCAST CONTEXT (last 24h):
 ${continuityNotes}
+
+CURRENT EDITION:
+- ${edition.label} (${edition.nominalTime} Tallinn time)
+- Tone guide: ${edition.styleCue}
 
 WRITE A COMPLETE RADIO SHOW SCRIPT covering ALL ${articles.length} stories. The show should:
 
@@ -675,8 +707,10 @@ async function main() {
   // Step 2: Generate comedy script
   console.log(`\n${'─'.repeat(60)}`);
   const liveNotice = await fetchPoltsamaaWeather();
+  const edition = getBroadcastEditionContext();
   console.log(`🌦️  Live notice: ${liveNotice.localDate}, ${liveNotice.localTime} (${TALLINN_TIMEZONE}) — ${liveNotice.summary}`);
-  const scriptData = await generateScript(articles, liveNotice, continuityNotes);
+  console.log(`🕒 Edition: ${edition.label} (${edition.nominalTime} Tallinn)`);
+  const scriptData = await generateScript(articles, liveNotice, continuityNotes, edition);
 
   if (!scriptData) {
     console.error('❌ Script generation failed. Exiting.');
@@ -715,7 +749,7 @@ async function main() {
   const today = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
   });
-  const title = `The Daily Roast Radio — ${today}`;
+  const title = `The Daily Roast Radio — ${today} · ${edition.label}`;
 
   const broadcast = await saveBroadcast(db, {
     title,
