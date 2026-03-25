@@ -51,6 +51,30 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const TALLINN_TIMEZONE = 'Europe/Tallinn';
 const POLTSAMAA = { name: 'Poltsamaa, Estonia', latitude: 58.6525, longitude: 25.9717 };
 const BROADCAST_SLOT = (process.env.BROADCAST_SLOT || '').trim().toLowerCase();
+const ENFORCE_TALLINN_SLOT_TIME = process.env.ENFORCE_TALLINN_SLOT_TIME === '1';
+
+function getTallinnNow(now = new Date()) {
+  return new Date(now.toLocaleString('en-US', { timeZone: TALLINN_TIMEZONE }));
+}
+
+function shouldRunScheduledBroadcast(now = new Date()) {
+  const tallinnNow = getTallinnNow(now);
+  const hour = tallinnNow.getHours();
+  const minute = tallinnNow.getMinutes();
+  const isTargetHour = hour === 9 || hour === 15 || hour === 21;
+  const isTargetMinute = minute <= 5;
+  return isTargetHour && isTargetMinute;
+}
+
+function getNextEditionTease(editionKey) {
+  if (editionKey === 'morning') {
+    return 'Sign off by inviting listeners back this afternoon.';
+  }
+  if (editionKey === 'afternoon') {
+    return 'Sign off by inviting listeners back this evening.';
+  }
+  return 'Sign off by inviting listeners back tomorrow morning.';
+}
 
 function getBroadcastEditionContext(now = new Date()) {
   if (BROADCAST_SLOT === 'morning') {
@@ -78,7 +102,7 @@ function getBroadcastEditionContext(now = new Date()) {
     };
   }
 
-  const tallinnNow = new Date(now.toLocaleString('en-US', { timeZone: TALLINN_TIMEZONE }));
+  const tallinnNow = getTallinnNow(now);
   const hour = tallinnNow.getHours();
 
   if (hour < 12) {
@@ -377,6 +401,7 @@ ${continuityNotes}
 CURRENT EDITION:
 - ${edition.label} (${edition.nominalTime} Tallinn time)
 - Tone guide: ${edition.styleCue}
+- End signoff instruction: ${getNextEditionTease(edition.key)}
 
 WRITE A COMPLETE RADIO SHOW SCRIPT covering ALL ${articles.length} stories. The show should:
 
@@ -387,7 +412,7 @@ WRITE A COMPLETE RADIO SHOW SCRIPT covering ALL ${articles.length} stories. The 
    - Host reads the headline, then both react and riff on it
    - 4-8 lines of dialogue per story with genuine comedy
    - Include at least one fictional "expert quote" or "listener call-in" per story
-4. **WRAP-UP** — Final banter, tease tomorrow's show
+4. **WRAP-UP** — Final banter, use the edition-specific signoff instruction above
 
 COMEDY STYLE:
 - Deadpan absurdity (treat insane things as normal)
@@ -714,6 +739,14 @@ async function main() {
   console.log('  THE DAILY ROAST RADIO — Broadcast Generator');
   console.log('📻📻📻📻📻📻📻📻📻📻📻📻📻📻📻📻📻📻📻📻');
   console.log(`\n📅 ${new Date().toISOString()}\n`);
+
+  if (ENFORCE_TALLINN_SLOT_TIME && !BROADCAST_SLOT && !shouldRunScheduledBroadcast()) {
+    const tallinnNow = getTallinnNow();
+    const hh = String(tallinnNow.getHours()).padStart(2, '0');
+    const mm = String(tallinnNow.getMinutes()).padStart(2, '0');
+    console.log(`⏭️  Skipping run at ${hh}:${mm} Tallinn time (target slots: 09:00, 15:00, 21:00).`);
+    process.exit(0);
+  }
 
   const db = getSupabaseClient();
 
