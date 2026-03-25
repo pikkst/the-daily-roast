@@ -60,10 +60,7 @@ function getTallinnNow(now = new Date()) {
 function shouldRunScheduledBroadcast(now = new Date()) {
   const tallinnNow = getTallinnNow(now);
   const hour = tallinnNow.getHours();
-  const minute = tallinnNow.getMinutes();
-  const isTargetHour = hour === 9 || hour === 15 || hour === 21;
-  const isTargetMinute = minute <= 5;
-  return isTargetHour && isTargetMinute;
+  return hour === 9 || hour === 15 || hour === 21;
 }
 
 function getNextEditionTease(editionKey) {
@@ -744,7 +741,7 @@ async function main() {
     const tallinnNow = getTallinnNow();
     const hh = String(tallinnNow.getHours()).padStart(2, '0');
     const mm = String(tallinnNow.getMinutes()).padStart(2, '0');
-    console.log(`⏭️  Skipping run at ${hh}:${mm} Tallinn time (target slots: 09:00, 15:00, 21:00).`);
+    console.log(`⏭️  Skipping run at ${hh}:${mm} Tallinn time (target hours: 09, 15, 21).`);
     process.exit(0);
   }
 
