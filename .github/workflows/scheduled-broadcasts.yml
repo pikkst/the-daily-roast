@@ -1,11 +1,9 @@
 name: Scheduled Broadcasts
 
 on:
-  # Fixed UTC schedule for broadcasts: 06:00, 12:00, 18:00
-  schedule:
-    - cron: '0 6,12,18 * * *'
-
-  # Manual trigger
+  # Manual trigger only.
+  # Scheduled broadcast generation is handled inside daily-content.yml
+  # right after article generation to keep data perfectly synchronized.
   workflow_dispatch:
 
 concurrency:
