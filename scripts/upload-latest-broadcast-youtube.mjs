@@ -10,8 +10,23 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const YT_CLIENT_ID = process.env.YT_CLIENT_ID;
 const YT_CLIENT_SECRET = process.env.YT_CLIENT_SECRET;
 const YT_REFRESH_TOKEN = process.env.YT_REFRESH_TOKEN;
-const YT_PRIVACY_STATUS = process.env.YT_PRIVACY_STATUS || 'public';
 const SITE_URL = process.env.SITE_URL || 'https://the-daily-roast-66e.pages.dev';
+
+function resolvePrivacyStatus(rawValue) {
+  const allowed = new Set(['public', 'unlisted', 'private']);
+  const normalized = String(rawValue || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^"|"$/g, '')
+    .replace(/^'|'$/g, '');
+
+  if (allowed.has(normalized)) return normalized;
+
+  console.warn(`Invalid YT_PRIVACY_STATUS value ("${rawValue || ''}"). Falling back to "unlisted".`);
+  return 'unlisted';
+}
+
+const YT_PRIVACY_STATUS = resolvePrivacyStatus(process.env.YT_PRIVACY_STATUS);
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY');
