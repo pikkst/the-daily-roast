@@ -25,6 +25,7 @@
   let bgmSourceNode = null;
   let animFrameId = null;
   let visualizerReady = false;
+  let deferredInstallPrompt = null;
 
   // DOM refs
   const els = {};
@@ -53,6 +54,9 @@
     els.intro       = document.getElementById('radio-intro');
     els.articlesSection = document.getElementById('radio-articles-section');
     els.articlesGrid = document.getElementById('radio-articles-grid');
+    els.installWrap = document.getElementById('radio-install-wrap');
+    els.installBtn = document.getElementById('radio-install-btn');
+    els.installHint = document.getElementById('radio-install-hint');
     els.audio       = document.getElementById('radio-audio');
     els.bgm         = document.getElementById('radio-bgm');
   }
@@ -60,8 +64,18 @@
   // ── Init ──
 
   window.addEventListener('supabase-ready', loadBroadcast);
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    cacheDom();
+    if (els.installWrap) {
+      els.installWrap.style.display = 'flex';
+    }
+  });
+
   document.addEventListener('DOMContentLoaded', () => {
     cacheDom();
+    setupInstallPrompt();
     if (getSupabase()) loadBroadcast();
   });
 
@@ -96,6 +110,27 @@
   function showEmpty() {
     if (els.loading) els.loading.style.display = 'none';
     if (els.empty) els.empty.style.display = 'block';
+  }
+
+  function setupInstallPrompt() {
+    if (!els.installBtn) return;
+
+    els.installBtn.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) {
+        if (els.installHint) {
+          els.installHint.textContent = 'Use your browser menu and choose Add to Home Screen to install the radio app.';
+        }
+        return;
+      }
+
+      deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      if (choice?.outcome === 'accepted') {
+        if (els.installHint) els.installHint.textContent = 'Radio app installed. Open it from your home screen.';
+      }
+      deferredInstallPrompt = null;
+      if (els.installBtn) els.installBtn.disabled = true;
+    });
   }
 
   // ── Render ──

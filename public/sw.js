@@ -7,6 +7,7 @@ const CACHE_NAME = 'daily-roast-v1';
 const STATIC_ASSETS = [
   '/',
   '/article',
+  '/radio',
   '/quiz',
   '/css/style.css',
   '/js/config.js',
@@ -14,7 +15,8 @@ const STATIC_ASSETS = [
   '/js/article.js',
   '/js/support.js',
   '/js/comments.js',
-  '/manifest.json'
+  '/manifest.json',
+  '/manifest-radio.json'
 ];
 
 // Install: pre-cache static assets

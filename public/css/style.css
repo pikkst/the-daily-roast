@@ -2661,6 +2661,46 @@ button {
   line-height: 1.7;
 }
 
+.radio-install {
+  margin-top: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.radio-install-btn {
+  border: 1px solid rgba(255,255,255,0.24);
+  background: rgba(220, 53, 69, 0.2);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 10px 16px;
+  transition: transform 0.2s, background 0.2s, border-color 0.2s;
+}
+
+.radio-install-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(220, 53, 69, 0.35);
+  border-color: rgba(255,255,255,0.4);
+}
+
+.radio-install-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+
+.radio-install-hint {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.6);
+  max-width: 520px;
+  margin: 0;
+}
+
 .radio-cat-pill {
   display: flex;
   align-items: center;
