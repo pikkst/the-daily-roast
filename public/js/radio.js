@@ -24,6 +24,7 @@
   let sourceNode = null;
   let bgmSourceNode = null;
   let animFrameId = null;
+  let visualizerReady = false;
 
   // DOM refs
   const els = {};
@@ -136,6 +137,9 @@
 
     // Player
     if (broadcast.audio_url) {
+      // Needed when piping remote media through WebAudio (visualizer path).
+      els.audio.crossOrigin = 'anonymous';
+      els.bgm.crossOrigin = 'anonymous';
       els.audio.src = broadcast.audio_url;
       els.audio.load();
       els.playerSection.style.display = 'block';
@@ -226,10 +230,18 @@
         await audioCtx.resume();
       }
 
-      if (!sourceNode) {
-        sourceNode = audioCtx.createMediaElementSource(els.audio);
-        sourceNode.connect(analyser);
-        analyser.connect(audioCtx.destination);
+      if (!sourceNode && analyser) {
+        try {
+          sourceNode = audioCtx.createMediaElementSource(els.audio);
+          sourceNode.connect(analyser);
+          analyser.connect(audioCtx.destination);
+          visualizerReady = true;
+        } catch (e) {
+          // Fallback: keep normal <audio> playback even if WebAudio graph fails.
+          visualizerReady = false;
+          analyser = null;
+          console.warn('Visualizer disabled for main audio:', e);
+        }
       }
 
       if (!bgmSourceNode && els.bgm.src) {
@@ -250,7 +262,9 @@
       els.pauseIcon.style.display = 'block';
       els.playBtn.classList.add('playing');
 
-      startVisualizer();
+      if (visualizerReady) {
+        startVisualizer();
+      }
     } catch (err) {
       console.error('Playback failed:', err);
     }
