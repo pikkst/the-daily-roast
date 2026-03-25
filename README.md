@@ -209,6 +209,9 @@ Broadcast upload to YouTube runs automatically after broadcast generation in:
 - `.github/workflows/daily-content.yml`
 - `.github/workflows/scheduled-broadcasts.yml`
 
+If you want to upload without generating a new broadcast (to avoid duplicate website posts), use:
+- `.github/workflows/youtube-upload-only.yml`
+
 ### Manual Article Generation
 
 Go to GitHub → **Actions** → **Daily Content Generation** → **Run workflow**
