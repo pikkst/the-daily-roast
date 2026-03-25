@@ -21,6 +21,7 @@
   let audio = null;
   let bgm = null;
   let isPlaying = false;
+  const BGM_STORAGE_KEY = 'mini-player-bgm-volume';
 
   window.addEventListener('supabase-ready', init);
   document.addEventListener('DOMContentLoaded', () => {
@@ -87,9 +88,16 @@
     bgm = new Audio();
     bgm.preload = 'none';
     bgm.loop = true;
-    bgm.volume = 0.25;
+    const savedVolume = Number(localStorage.getItem(BGM_STORAGE_KEY));
+    const defaultVolume = Number.isFinite(savedVolume) ? savedVolume : 0.10;
+    bgm.volume = Math.min(1, Math.max(0, defaultVolume));
     const bgmTheme = broadcast.bgm_theme || 'upbeat';
     bgm.src = BGM_TRACKS[bgmTheme] || BGM_TRACKS.upbeat;
+
+    const bgmSlider = document.getElementById('mini-player-bgm-volume');
+    if (bgmSlider) {
+      bgmSlider.value = String(Math.round(bgm.volume * 100));
+    }
 
     // Setup events
     setupEvents();
@@ -101,6 +109,7 @@
   function setupEvents() {
     const playBtn = document.getElementById('mini-player-play');
     const shareBtn = document.getElementById('mini-player-share');
+    const bgmSlider = document.getElementById('mini-player-bgm-volume');
 
     if (playBtn) {
       playBtn.addEventListener('click', togglePlay);
@@ -113,6 +122,14 @@
           shareBtn.textContent = '✅';
           setTimeout(() => { shareBtn.textContent = '🔗'; }, 2000);
         });
+      });
+    }
+
+    if (bgmSlider) {
+      bgmSlider.addEventListener('input', (e) => {
+        const vol = Math.min(1, Math.max(0, parseInt(e.target.value, 10) / 100));
+        if (bgm) bgm.volume = vol;
+        localStorage.setItem(BGM_STORAGE_KEY, String(vol));
       });
     }
 
