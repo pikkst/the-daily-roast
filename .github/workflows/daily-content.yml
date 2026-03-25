@@ -37,14 +37,29 @@ jobs:
             exit 0
           fi
 
-          tallinn_hh="$(TZ=Europe/Tallinn date +%H)"
+          utc_hh="$(date -u +%H)"
+          tallinn_offset="$(TZ=Europe/Tallinn date +%z)"
           tallinn_hhmm="$(TZ=Europe/Tallinn date +%H:%M)"
-          if [ "$tallinn_hh" = "09" ] || [ "$tallinn_hh" = "15" ] || [ "$tallinn_hh" = "21" ]; then
+
+          # Winter (UTC+2): 09/15/21 Tallinn => 07/13/19 UTC
+          # Summer (UTC+3): 09/15/21 Tallinn => 06/12/18 UTC
+          should_run=false
+          if [ "$tallinn_offset" = "+0200" ]; then
+            if [ "$utc_hh" = "07" ] || [ "$utc_hh" = "13" ] || [ "$utc_hh" = "19" ]; then
+              should_run=true
+            fi
+          elif [ "$tallinn_offset" = "+0300" ]; then
+            if [ "$utc_hh" = "06" ] || [ "$utc_hh" = "12" ] || [ "$utc_hh" = "18" ]; then
+              should_run=true
+            fi
+          fi
+
+          if [ "$should_run" = "true" ]; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "✅ Tallinn slot matched: $tallinn_hhmm"
+            echo "✅ Tallinn slot matched: $tallinn_hhmm (UTC $utc_hh:00, offset $tallinn_offset)"
           else
             echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "⏭️ Tallinn slot not matched ($tallinn_hhmm), skipping heavy jobs"
+            echo "⏭️ Tallinn slot not matched ($tallinn_hhmm, UTC $utc_hh:00, offset $tallinn_offset), skipping heavy jobs"
           fi
 
       - name: Checkout repository
