@@ -50,8 +50,34 @@ const CATEGORY_ICONS = {
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const TALLINN_TIMEZONE = 'Europe/Tallinn';
 const POLTSAMAA = { name: 'Poltsamaa, Estonia', latitude: 58.6525, longitude: 25.9717 };
+const BROADCAST_SLOT = (process.env.BROADCAST_SLOT || '').trim().toLowerCase();
 
 function getBroadcastEditionContext(now = new Date()) {
+  if (BROADCAST_SLOT === 'morning') {
+    return {
+      key: 'morning',
+      label: 'Morning Edition',
+      nominalTime: '09:00',
+      styleCue: 'energized start-of-day briefing'
+    };
+  }
+  if (BROADCAST_SLOT === 'afternoon') {
+    return {
+      key: 'afternoon',
+      label: 'Afternoon Edition',
+      nominalTime: '15:00',
+      styleCue: 'midday follow-up and update briefing'
+    };
+  }
+  if (BROADCAST_SLOT === 'evening') {
+    return {
+      key: 'evening',
+      label: 'Evening Edition',
+      nominalTime: '21:00',
+      styleCue: 'end-of-day wrap-up briefing'
+    };
+  }
+
   const tallinnNow = new Date(now.toLocaleString('en-US', { timeZone: TALLINN_TIMEZONE }));
   const hour = tallinnNow.getHours();
 
