@@ -49,9 +49,7 @@
     els.volBtn      = document.getElementById('radio-vol-btn');
     els.bgmVolume   = document.getElementById('radio-bgm-volume');
     els.canvas      = document.getElementById('radio-canvas');
-    els.scriptSection = document.getElementById('radio-script-section');
-    els.scriptMeta  = document.getElementById('radio-script-meta');
-    els.scriptEl    = document.getElementById('radio-script');
+    els.intro       = document.getElementById('radio-intro');
     els.articlesSection = document.getElementById('radio-articles-section');
     els.articlesGrid = document.getElementById('radio-articles-grid');
     els.audio       = document.getElementById('radio-audio');
@@ -130,6 +128,12 @@
       els.categories.innerHTML = pills;
     }
 
+    if (els.intro) {
+      const minutes = Math.max(1, Math.round((broadcast.duration_seconds || 0) / 60));
+      const storyCount = Array.isArray(broadcast.article_ids) ? broadcast.article_ids.length : 0;
+      els.intro.textContent = `Today's edition features ${storyCount} stories in a ${minutes}-minute comedy bulletin with hosts Joe & Jane.`;
+    }
+
     // Player
     if (broadcast.audio_url) {
       els.audio.src = broadcast.audio_url;
@@ -140,15 +144,10 @@
       const bgmTheme = broadcast.bgm_theme || 'upbeat';
       const bgmUrl = BGM_TRACKS[bgmTheme] || BGM_TRACKS.upbeat;
       els.bgm.src = bgmUrl;
-      els.bgm.volume = 0.35;
+      els.bgm.volume = 0.25;
       els.bgm.load();
 
       setupPlayer();
-    }
-
-    // Script
-    if (broadcast.script && broadcast.script.length > 0) {
-      renderScript(broadcast.script);
     }
 
     // Related articles
@@ -156,28 +155,6 @@
 
     // Share buttons
     setupShare();
-  }
-
-  // ── Script Rendering ──
-
-  function renderScript(script) {
-    els.scriptMeta.textContent = `${script.length} lines · ~${Math.round((broadcast.duration_seconds || 0) / 60)} min`;
-
-    const html = script.map((line, idx) => {
-      const isJoe = line.speaker === 'Joe';
-      return `<div class="script-line ${isJoe ? 'script-line--joe' : 'script-line--jane'}" data-idx="${idx}" id="script-line-${idx}">
-        <div class="script-avatar ${isJoe ? 'script-avatar--joe' : 'script-avatar--jane'}">
-          ${line.speaker[0]}
-        </div>
-        <div class="script-bubble ${isJoe ? 'script-bubble--joe' : 'script-bubble--jane'}">
-          <div class="script-speaker">${line.speaker}</div>
-          <div class="script-text">${escapeHtml(line.text)}</div>
-        </div>
-      </div>`;
-    }).join('');
-
-    els.scriptEl.innerHTML = html;
-    els.scriptSection.style.display = 'block';
   }
 
   // ── Player Setup ──
@@ -198,9 +175,6 @@
       els.progressFill.style.width = pct + '%';
       els.progressInput.value = Math.floor(els.audio.currentTime);
       els.timeCurrent.textContent = formatTime(els.audio.currentTime);
-
-      // Highlight current script line
-      updateScriptHighlight(els.audio.currentTime, els.audio.duration);
     });
 
     els.audio.addEventListener('ended', () => {
@@ -269,6 +243,7 @@
 
       await els.audio.play();
       els.bgm.play().catch(() => {});
+      els.speakerName.textContent = 'On air: Joe & Jane';
 
       isPlaying = true;
       els.playIcon.style.display = 'none';
@@ -284,6 +259,7 @@
   function stopPlayback() {
     els.audio.pause();
     els.bgm.pause();
+    els.speakerName.textContent = 'Ready to play';
     isPlaying = false;
     els.playIcon.style.display = 'block';
     els.pauseIcon.style.display = 'none';
@@ -339,44 +315,6 @@
     draw();
   }
 
-  // ── Script Highlight ──
-
-  function updateScriptHighlight(currentTime, duration) {
-    if (!broadcast || !broadcast.script || broadcast.script.length === 0) return;
-
-    const script = broadcast.script;
-    const totalChars = script.reduce((acc, line) => acc + line.text.length, 0);
-    if (totalChars === 0) return;
-
-    let elapsed = 0;
-    let currentIdx = 0;
-
-    for (let i = 0; i < script.length; i++) {
-      const lineEndTime = ((elapsed + script[i].text.length) / totalChars) * duration;
-      if (currentTime < lineEndTime) {
-        currentIdx = i;
-        break;
-      }
-      elapsed += script[i].text.length;
-      if (i === script.length - 1) currentIdx = i;
-    }
-
-    // Update highlight
-    document.querySelectorAll('.script-line').forEach((el, idx) => {
-      el.classList.toggle('script-line--active', idx === currentIdx);
-    });
-
-    // Update speaker indicator
-    const speaker = script[currentIdx]?.speaker || '';
-    els.speakerName.textContent = `${speaker} is speaking...`;
-
-    // Auto-scroll to active line
-    const activeLine = document.getElementById(`script-line-${currentIdx}`);
-    if (activeLine) {
-      activeLine.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }
-
   // ── Related Articles ──
 
   async function renderRelatedArticles() {
@@ -390,24 +328,28 @@
     try {
       const { data, error } = await db
         .from('articles_with_category')
-        .select('title, slug, excerpt, category_slug, category_name, category_color, image_url, reading_time, created_at')
+        .select('id, title, slug, excerpt, category_slug, category_name, category_color, image_url, reading_time, created_at')
         .in('id', broadcast.article_ids);
 
       if (error) throw error;
       if (!data || data.length === 0) return;
 
-      const cards = data.map(article => {
+      const ordered = broadcast.article_ids
+        .map(id => data.find(article => article.id === id))
+        .filter(Boolean);
+      const playlistData = ordered.length > 0 ? ordered : data;
+
+      const cards = playlistData.map((article, idx) => {
         const catIcon = CATEGORY_ICONS[article.category_slug] || '📰';
         const catColor = article.category_color || '#e63946';
-        return `<a href="/article?slug=${encodeURIComponent(article.slug)}" class="radio-article-card">
-          ${article.image_url 
-            ? `<img class="radio-article-img" src="${article.image_url}" alt="" loading="lazy">` 
-            : `<div class="radio-article-img radio-article-img--placeholder">${catIcon}</div>`}
+        return `<a href="/article?slug=${encodeURIComponent(article.slug)}" class="radio-playlist-item">
+          <span class="radio-playlist-index">${String(idx + 1).padStart(2, '0')}</span>
           <div class="radio-article-info">
             <span class="radio-article-cat" style="color:${catColor}">${catIcon} ${article.category_name}</span>
             <h3 class="radio-article-title">${escapeHtml(article.title)}</h3>
             <p class="radio-article-excerpt">${escapeHtml(article.excerpt || '')}</p>
           </div>
+          <span class="radio-playlist-action">Open</span>
         </a>`;
       }).join('');
 
