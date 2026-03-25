@@ -48,6 +48,117 @@ const CATEGORY_ICONS = {
 };
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const TALLINN_TIMEZONE = 'Europe/Tallinn';
+const POLTSAMAA = { name: 'Poltsamaa, Estonia', latitude: 58.6525, longitude: 25.9717 };
+
+function getWeatherLabel(code) {
+  const labels = {
+    0: 'clear sky',
+    1: 'mainly clear',
+    2: 'partly cloudy',
+    3: 'overcast',
+    45: 'foggy',
+    48: 'depositing rime fog',
+    51: 'light drizzle',
+    53: 'moderate drizzle',
+    55: 'dense drizzle',
+    56: 'light freezing drizzle',
+    57: 'dense freezing drizzle',
+    61: 'slight rain',
+    63: 'moderate rain',
+    65: 'heavy rain',
+    66: 'light freezing rain',
+    67: 'heavy freezing rain',
+    71: 'slight snowfall',
+    73: 'moderate snowfall',
+    75: 'heavy snowfall',
+    77: 'snow grains',
+    80: 'slight rain showers',
+    81: 'moderate rain showers',
+    82: 'violent rain showers',
+    85: 'slight snow showers',
+    86: 'heavy snow showers',
+    95: 'thunderstorm',
+    96: 'thunderstorm with slight hail',
+    99: 'thunderstorm with heavy hail'
+  };
+  return labels[code] || 'mixed weather';
+}
+
+function getTallinnDateTime(now = new Date()) {
+  const localDate = new Intl.DateTimeFormat('en-GB', {
+    timeZone: TALLINN_TIMEZONE,
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }).format(now);
+
+  const localTime = new Intl.DateTimeFormat('en-GB', {
+    timeZone: TALLINN_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(now);
+
+  return { localDate, localTime };
+}
+
+async function fetchPoltsamaaWeather() {
+  const { localDate, localTime } = getTallinnDateTime();
+  const fallback = {
+    location: POLTSAMAA.name,
+    localDate,
+    localTime,
+    summary: 'weather update currently unavailable, but still gloriously dramatic'
+  };
+
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${POLTSAMAA.latitude}&longitude=${POLTSAMAA.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=${encodeURIComponent(TALLINN_TIMEZONE)}`;
+    const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!response.ok) throw new Error(`Open-Meteo HTTP ${response.status}`);
+
+    const data = await response.json();
+    const current = data?.current;
+    if (!current) throw new Error('Missing current weather payload');
+
+    const temp = Math.round(Number(current.temperature_2m));
+    const feelsLike = Math.round(Number(current.apparent_temperature));
+    const wind = Math.round(Number(current.wind_speed_10m));
+    const weatherCode = Number(current.weather_code);
+    const label = getWeatherLabel(weatherCode);
+
+    return {
+      location: POLTSAMAA.name,
+      localDate,
+      localTime,
+      summary: `${label}, ${temp}C (feels like ${feelsLike}C), wind ${wind} km/h`
+    };
+  } catch (err) {
+    console.warn(`  ⚠️  Weather fetch failed: ${err.message}`);
+    return fallback;
+  }
+}
+
+function injectLiveNotice(script, liveNotice) {
+  const noticeLines = [
+    {
+      speaker: 'Joe',
+      text: `Live update from ${liveNotice.location}: today is ${liveNotice.localDate}, local time ${liveNotice.localTime}.`
+    },
+    {
+      speaker: 'Jane',
+      text: `Current weather in ${liveNotice.location}: ${liveNotice.summary}.`
+    }
+  ];
+
+  const insertAt = Math.min(3, script.length);
+  return [
+    ...script.slice(0, insertAt),
+    ...noticeLines,
+    ...script.slice(insertAt)
+  ];
+}
 
 // ---------- Initialize Supabase ----------
 
@@ -111,7 +222,7 @@ async function fetchArticlesPerCategory(db) {
 
 // ---------- Step 2: Generate Comedy Script ----------
 
-async function generateScript(articles, retries = 2) {
+async function generateScript(articles, liveNotice, retries = 2) {
   console.log('🎙️  Generating comedy radio script...\n');
 
   const articleSummaries = articles.map(a =>
@@ -130,12 +241,17 @@ WRITE A COMPLETE RADIO SHOW SCRIPT covering ALL ${articles.length} stories. The 
 
 1. **COLD OPEN** — Joe or Jane with a quick one-liner hook that pulls listeners in
 2. **INTRO** — Brief banter between Joe and Jane (who we are, what day it is)
-3. **STORY SEGMENTS** — For each of the ${articles.length} stories:
+3. **LIVE NOTICE (MANDATORY)** — right after intro, include a short on-air update that says:
+  - Date: ${liveNotice.localDate}
+  - Time (${TALLINN_TIMEZONE}): ${liveNotice.localTime}
+  - Current weather in ${liveNotice.location}: ${liveNotice.summary}
+  - Keep this update to 2-4 lines in a fun radio tone
+4. **STORY SEGMENTS** — For each of the ${articles.length} stories:
    - Quick transition/jingle reference (e.g., "Moving on to..." or "And now, from the world of...")
    - Host reads the headline, then both react and riff on it
    - 4-8 lines of dialogue per story with genuine comedy
    - Include at least one fictional "expert quote" or "listener call-in" per story
-4. **WRAP-UP** — Final banter, tease tomorrow's show
+5. **WRAP-UP** — Final banter, tease tomorrow's show
 
 COMEDY STYLE:
 - Deadpan absurdity (treat insane things as normal)
@@ -199,6 +315,8 @@ The script should have 60-90 lines total (~15 minutes of audio). Every line must
         speaker: line.speaker === 'Jane' ? 'Jane' : 'Joe',
         text: String(line.text || '').trim()
       })).filter(line => line.text.length > 0);
+
+      data.script = injectLiveNotice(data.script, liveNotice);
 
       console.log(`  ✅ Script generated: ${data.script.length} lines`);
       console.log(`  🎵 BGM theme: ${data.bgmTheme || 'upbeat'}`);
@@ -471,7 +589,9 @@ async function main() {
 
   // Step 2: Generate comedy script
   console.log(`\n${'─'.repeat(60)}`);
-  const scriptData = await generateScript(articles);
+  const liveNotice = await fetchPoltsamaaWeather();
+  console.log(`🌦️  Live notice: ${liveNotice.localDate}, ${liveNotice.localTime} (${TALLINN_TIMEZONE}) — ${liveNotice.summary}`);
+  const scriptData = await generateScript(articles, liveNotice);
 
   if (!scriptData) {
     console.error('❌ Script generation failed. Exiting.');
