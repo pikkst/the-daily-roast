@@ -479,6 +479,19 @@ button {
   color: white;
 }
 
+.featured-fiction-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  background: rgba(220, 53, 69, 0.12);
+  border: 1px solid rgba(220, 53, 69, 0.28);
+}
+
 /* ---------- Articles Section ---------- */
 .articles-section {
   margin-top: var(--space-3xl);
@@ -578,6 +591,22 @@ button {
   z-index: 2;
 }
 
+.card-fiction-tag {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #fff;
+  background: rgba(27, 40, 56, 0.88);
+  border: 1px solid rgba(255,255,255,0.22);
+  z-index: 2;
+}
+
 .card-content {
   padding: var(--space-lg);
   flex: 1;
@@ -652,6 +681,20 @@ button {
   align-items: center;
   gap: var(--space-md);
   margin-bottom: var(--space-lg);
+}
+
+.article-fiction-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  background: #fff0f2;
+  border: 1px solid #ffd0d6;
 }
 
 .article-category {
@@ -1398,6 +1441,16 @@ button {
 .trending-views {
   font-size: 0.75rem;
   color: var(--text-tertiary);
+}
+
+.trending-fiction-tag {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  margin: 2px 0;
 }
 
 .trending-thumb {
@@ -2482,6 +2535,21 @@ button {
   font-size: 0.9rem;
   color: rgba(255,255,255,0.5);
   margin-bottom: var(--space-lg);
+}
+
+.radio-fiction-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #ffd7dc;
+  background: rgba(220, 53, 69, 0.22);
+  border: 1px solid rgba(255,255,255,0.2);
+  margin-bottom: var(--space-md);
 }
 
 .radio-cover {

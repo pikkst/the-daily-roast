@@ -422,6 +422,7 @@
         <a href="/article?slug=${article.slug}">
           <div class="card-image">
             <span class="card-category" style="background: ${catColor};">${article.category_name || 'News'}</span>
+            <span class="card-fiction-tag">Parody / Fiction</span>
             ${article.image_url
               ? `<img src="${article.image_url}" alt="${article.image_alt || article.title}" loading="lazy">`
               : `<div class="card-image-gradient" style="background: ${gradient};">${catIcon}</div>`

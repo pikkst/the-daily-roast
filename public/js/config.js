@@ -23,7 +23,7 @@ const CONFIG = {
   
   // Site
   SITE_NAME: 'The Daily Roast',
-  SITE_TAGLINE: 'Real Headlines. Unreal Stories.',
+  SITE_TAGLINE: 'Real headlines. Unreal satire. Daily parody radio.',
   ARTICLES_PER_PAGE: 9,
   
   // Category gradients (for article cards without images)

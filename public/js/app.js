@@ -260,6 +260,7 @@
               <div class="trending-info">
                 <span class="trending-category" style="color: ${catColor};">${getCategoryIcon(article.category_slug)} ${article.category_name || 'News'}</span>
                 <h4 class="trending-title">${article.title}</h4>
+                <span class="trending-fiction-tag">Parody / Fiction</span>
                 <span class="trending-views">${(article.views || 0).toLocaleString()} views · ${timeAgo(article.created_at)}</span>
               </div>
               ${article.image_url ? `<img class="trending-thumb" src="${article.image_url}" alt="">` : ''}
@@ -299,6 +300,7 @@
           <p class="featured-excerpt">${article.excerpt}</p>
           <div class="featured-meta">
             <span class="featured-category-tag" style="background: ${catColor};">${article.category_name || 'News'}</span>
+            <span class="featured-fiction-tag">Parody / Fiction</span>
             <span>${timeAgo(article.created_at)}</span>
             <span>·</span>
             <span>${article.reading_time || 3} min read</span>
@@ -321,6 +323,7 @@
         <a href="/article?slug=${article.slug}">
           <div class="card-image">
             <span class="card-category" style="background: ${catColor};">${article.category_name || 'News'}</span>
+            <span class="card-fiction-tag">Parody / Fiction</span>
             ${article.image_url
               ? `<img src="${article.image_url}" alt="${article.image_alt || article.title}" loading="lazy">`
               : `<div class="card-image-gradient" style="background: ${gradient};">${catIcon}</div>`
