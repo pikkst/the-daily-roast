@@ -109,6 +109,7 @@
           <li><a href="?cat=entertainment" class="nav-link" data-category="entertainment">🎬 Entertainment</a></li>
           <li><a href="?cat=sports" class="nav-link" data-category="sports">⚽ Sports</a></li>
           <li><a href="?cat=world" class="nav-link" data-category="world">🌍 World</a></li>
+          <li><a href="weekly.html" class="nav-link nav-link--weekly">🏆 Weekly Top 10</a></li>
           <li><a href="quiz.html" class="nav-link nav-link--quiz">🎮 Roast or Real?</a></li>
           <li><a href="radio.html" class="nav-link nav-link--radio">📻 Radio</a></li>
         </ul>
@@ -125,6 +126,25 @@
       </div>
     </div>
   </div>
+
+  <!-- Returning Visitor Support Prompt -->
+  <section class="returning-support" id="returning-support" style="display:none;" aria-live="polite">
+    <div class="container">
+      <div class="returning-support-inner">
+        <div class="returning-support-copy">
+          <p class="returning-support-kicker">☕ WELCOME BACK</p>
+          <h3 class="returning-support-title">You keep reading. Help keep the roasts running.</h3>
+          <p class="returning-support-text">If The Daily Roast is part of your routine, a tiny monthly donation keeps servers and AI generation alive.</p>
+        </div>
+        <div class="returning-support-actions">
+          <button class="donation-btn donation-btn--sm" data-tier="monthly_2" data-amount="2">€2/mo</button>
+          <button class="donation-btn donation-btn--sm donation-btn--popular" data-tier="monthly_5" data-amount="5">€5/mo ⭐</button>
+          <button class="donation-btn donation-btn--sm" data-tier="monthly_10" data-amount="10">€10/mo</button>
+        </div>
+        <button class="returning-support-dismiss" id="returning-support-dismiss" aria-label="Dismiss support prompt">Not now</button>
+      </div>
+    </div>
+  </section>
 
   <!-- Mini Radio Player -->
   <div class="mini-player" id="mini-player" style="display:none;">
@@ -179,6 +199,25 @@
             <div class="skeleton-line w90"></div>
           </div>
         </div>
+      </section>
+
+      <!-- Roast of the Day -->
+      <section class="roast-day-section" id="roast-day-section" style="display:none;">
+        <div class="section-header">
+          <h2 class="section-title">🏆 Roast of the Day</h2>
+          <div class="section-line"></div>
+        </div>
+        <div id="roast-day-card"></div>
+      </section>
+
+      <!-- Weekly Top 10 Teaser -->
+      <section class="weekly-teaser-section" id="weekly-teaser-section" style="display:none;">
+        <div class="section-header">
+          <h2 class="section-title">🏅 Weekly Top 10</h2>
+          <div class="section-line"></div>
+          <a href="weekly.html" class="weekly-teaser-link">See Full List →</a>
+        </div>
+        <div class="weekly-teaser-grid" id="weekly-teaser-grid"></div>
       </section>
 
       <!-- Trending / Most Roasted -->
@@ -269,6 +308,7 @@
             <li><a href="?cat=entertainment">Entertainment</a></li>
             <li><a href="?cat=sports">Sports</a></li>
             <li><a href="?cat=world">World</a></li>
+            <li><a href="weekly.html">🏆 Weekly Top 10</a></li>
             <li><a href="quiz.html">🎮 Roast or Real?</a></li>
           </ul>
         </div>

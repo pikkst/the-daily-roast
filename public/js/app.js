@@ -33,9 +33,68 @@
     
     // Load content
     loadFeatured();
+    loadRoastOfTheDay();
+    loadWeeklyTeaser();
     loadArticles();
     loadTrending();
+    setupReturningSupportPrompt();
     setupLoadMore();
+  }
+
+  function setupReturningSupportPrompt() {
+    const section = document.getElementById('returning-support');
+    const dismissBtn = document.getElementById('returning-support-dismiss');
+    if (!section) return;
+
+    const now = Date.now();
+    const MS_IN_DAY = 24 * 60 * 60 * 1000;
+    const stateKey = 'tdr_visit_state';
+    const dismissedUntilKey = 'tdr_support_dismissed_until';
+
+    let state = { count: 0, firstSeen: now, lastSeen: now };
+    try {
+      const raw = localStorage.getItem(stateKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          state = {
+            count: Number(parsed.count) || 0,
+            firstSeen: Number(parsed.firstSeen) || now,
+            lastSeen: Number(parsed.lastSeen) || now
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Unable to read visit state:', err);
+    }
+
+    state.count += 1;
+    state.lastSeen = now;
+
+    try {
+      localStorage.setItem(stateKey, JSON.stringify(state));
+    } catch (err) {
+      console.warn('Unable to save visit state:', err);
+    }
+
+    const dismissedUntil = Number(localStorage.getItem(dismissedUntilKey) || 0);
+    const isDismissed = dismissedUntil > now;
+
+    const shouldShow = state.count >= 3 && !isDismissed;
+    if (!shouldShow) return;
+
+    // Delay a bit so the banner appears after first content paint.
+    setTimeout(() => {
+      section.style.display = 'block';
+    }, 1200);
+
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', () => {
+        section.style.display = 'none';
+        const nextTime = now + 7 * MS_IN_DAY;
+        localStorage.setItem(dismissedUntilKey, String(nextTime));
+      });
+    }
   }
 
   function setHeaderDate() {
@@ -234,6 +293,97 @@
 
   // ---------- Trending / Most Roasted ----------
 
+  async function loadRoastOfTheDay() {
+    const section = document.getElementById('roast-day-section');
+    const cardWrap = document.getElementById('roast-day-card');
+    if (!section || !cardWrap) return;
+
+    const db = getSupabase();
+    if (!db) return;
+
+    const todayKey = getUTCDateKey();
+
+    try {
+      const { data: lockRows, error: lockError } = await db
+        .from('daily_roast_lock')
+        .select('*')
+        .eq('lock_date', todayKey)
+        .limit(1);
+
+      if (!lockError && lockRows && lockRows.length > 0) {
+        const locked = lockRows[0];
+        if (!currentCategory || locked.category_slug === currentCategory) {
+          cardWrap.innerHTML = renderRoastOfTheDay({
+            slug: locked.article_slug,
+            title: locked.title,
+            excerpt: locked.excerpt,
+            image_url: locked.image_url,
+            image_alt: locked.image_alt,
+            category_slug: locked.category_slug,
+            category_name: locked.category_name,
+            category_color: locked.category_color,
+            views: locked.views_snapshot,
+            created_at: locked.source_created_at || locked.locked_at
+          });
+          section.style.display = 'block';
+          return;
+        }
+      }
+
+      const data = await fetchDynamicRoastCandidate(db);
+
+      if (data) {
+        cardWrap.innerHTML = renderRoastOfTheDay(data);
+        section.style.display = 'block';
+      }
+    } catch (err) {
+      console.error('Error loading roast of the day:', err);
+    }
+  }
+
+  async function fetchDynamicRoastCandidate(db) {
+    const now = new Date();
+    const todayStartUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const tomorrowStartUTC = new Date(todayStartUTC);
+    tomorrowStartUTC.setUTCDate(tomorrowStartUTC.getUTCDate() + 1);
+
+    let query = db
+      .from('articles_with_category')
+      .select('*')
+      .gte('created_at', todayStartUTC.toISOString())
+      .lt('created_at', tomorrowStartUTC.toISOString())
+      .order('views', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (currentCategory) {
+      query = query.eq('category_slug', currentCategory);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    if (data && data.length > 0) return data[0];
+
+    let fallbackQuery = db
+      .from('articles_with_category')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (currentCategory) {
+      fallbackQuery = fallbackQuery.eq('category_slug', currentCategory);
+    }
+
+    const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+    if (fallbackError) throw fallbackError;
+    return (fallbackData && fallbackData.length > 0) ? fallbackData[0] : null;
+  }
+
+  function getUTCDateKey() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
   async function loadTrending() {
     const section = document.getElementById('trending-section');
     const bar = document.getElementById('trending-bar');
@@ -274,6 +424,55 @@
     }
   }
 
+  async function loadWeeklyTeaser() {
+    const section = document.getElementById('weekly-teaser-section');
+    const grid = document.getElementById('weekly-teaser-grid');
+    if (!section || !grid) return;
+
+    const db = getSupabase();
+    if (!db) return;
+
+    try {
+      const { data: summaries, error: summaryError } = await db
+        .from('weekly_roast_summaries')
+        .select('id, week_start_date, week_end_date')
+        .order('generated_at', { ascending: false })
+        .limit(1);
+
+      if (summaryError || !summaries || summaries.length === 0) return;
+
+      const summary = summaries[0];
+
+      const { data: items, error: itemsError } = await db
+        .from('weekly_roast_items')
+        .select('rank, article_slug, title, category_slug, views, absurdity_score')
+        .eq('summary_id', summary.id)
+        .order('rank', { ascending: true })
+        .limit(3);
+
+      if (itemsError || !items || items.length === 0) return;
+
+      grid.innerHTML = items.map((item) => `
+        <a href="/article?slug=${encodeURIComponent(item.article_slug)}" class="weekly-teaser-item">
+          <div class="weekly-teaser-rank">#${item.rank}</div>
+          <div class="weekly-teaser-info">
+            <span class="weekly-teaser-cat">${getCategoryIcon(item.category_slug)} ${(item.category_slug || 'news').toUpperCase()}</span>
+            <h3 class="weekly-teaser-title">${item.title}</h3>
+            <div class="weekly-teaser-meta">
+              <span>${(item.views || 0).toLocaleString()} views</span>
+              <span>·</span>
+              <span>Absurdity ${item.absurdity_score || 0}</span>
+            </div>
+          </div>
+        </a>
+      `).join('');
+
+      section.style.display = 'block';
+    } catch (err) {
+      console.error('Error loading weekly teaser:', err);
+    }
+  }
+
   // ---------- Render Functions ----------
 
   function renderFeatured(article) {
@@ -306,6 +505,37 @@
             <span>${article.reading_time || 3} min read</span>
             <span>·</span>
             <span>By ${article.author || 'AI Correspondent'}</span>
+          </div>
+        </div>
+      </a>
+    `;
+  }
+
+  function renderRoastOfTheDay(article) {
+    const catSlug = article.category_slug || 'default';
+    const catColor = article.category_color || '#e63946';
+    const catIcon = getCategoryIcon(catSlug);
+    const imageUrl = getImageUrl(article);
+
+    return `
+      <a href="/article?slug=${article.slug}" class="roast-day-card">
+        <div class="roast-day-image">
+          ${article.image_url
+            ? `<img src="${imageUrl}" alt="${article.image_alt || article.title}" loading="lazy">`
+            : `<div class="roast-day-image-gradient" style="background: ${getCategoryColor(catSlug)};">${catIcon}</div>`
+          }
+        </div>
+        <div class="roast-day-content">
+          <div class="roast-day-topline">
+            <span class="roast-day-label">${catIcon} Daily Winner</span>
+            <span class="roast-day-views">${(article.views || 0).toLocaleString()} views</span>
+          </div>
+          <h3 class="roast-day-title">${article.title}</h3>
+          <p class="roast-day-excerpt">${article.excerpt || 'Today\'s strongest roast, selected from the latest absurd headlines.'}</p>
+          <div class="roast-day-meta">
+            <span class="featured-category-tag" style="background: ${catColor};">${article.category_name || 'News'}</span>
+            <span class="featured-fiction-tag">Parody / Fiction</span>
+            <span>${timeAgo(article.created_at)}</span>
           </div>
         </div>
       </a>

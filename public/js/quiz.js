@@ -5,6 +5,8 @@
 (function() {
   const TOTAL_QUESTIONS = 10;
   const REAL_HEADLINES_NEEDED = 5;
+  const MODE_CLASSIC = 'classic';
+  const MODE_DAILY = 'daily';
 
   // Hard-coded pool of REAL headlines (verified real news snippets)
   const REAL_HEADLINE_POOL = [
@@ -39,6 +41,10 @@
   let currentQuestion = 0;
   let score = 0;
   let answered = false;
+  let quizMode = MODE_CLASSIC;
+  let currentDayKey = '';
+  let latestShareCardDataUrl = '';
+  let latestShareCardBlob = null;
 
   // Wait for Supabase
   window.addEventListener('supabase-ready', init);
@@ -51,16 +57,21 @@
     if (initialized) return;
     initialized = true;
 
-    document.getElementById('quiz-start-btn').addEventListener('click', startQuiz);
+    document.getElementById('quiz-start-classic').addEventListener('click', () => startQuiz(MODE_CLASSIC));
+    document.getElementById('quiz-start-daily').addEventListener('click', () => startQuiz(MODE_DAILY));
     document.getElementById('quiz-replay').addEventListener('click', () => {
       document.getElementById('quiz-results').style.display = 'none';
-      startQuiz();
+      startQuiz(quizMode);
     });
 
+    updateDailyStatusUI();
     loadLeaderboard('leaderboard-list-intro', 'quiz-leaderboard-intro');
   }
 
-  async function startQuiz() {
+  async function startQuiz(mode = MODE_CLASSIC) {
+    quizMode = mode;
+    currentDayKey = getDayKey();
+
     document.getElementById('quiz-intro').style.display = 'none';
     document.getElementById('quiz-results').style.display = 'none';
     document.getElementById('quiz-game').style.display = '';
@@ -100,13 +111,15 @@
     }
 
     // Shuffle and pick
-    const shuffledRoasts = shuffle(roastHeadlines).slice(0, TOTAL_QUESTIONS - REAL_HEADLINES_NEEDED);
-    const shuffledReals = shuffle([...REAL_HEADLINE_POOL]).slice(0, REAL_HEADLINES_NEEDED);
-
-    // Build quiz
-    shuffledRoasts.forEach(h => quizData.push({ headline: h, isRoast: true }));
-    shuffledReals.forEach(h => quizData.push({ headline: h, isRoast: false }));
-    quizData = shuffle(quizData);
+    if (quizMode === MODE_DAILY) {
+      quizData = buildDailyQuiz(roastHeadlines, currentDayKey);
+    } else {
+      const shuffledRoasts = shuffle(roastHeadlines).slice(0, TOTAL_QUESTIONS - REAL_HEADLINES_NEEDED);
+      const shuffledReals = shuffle([...REAL_HEADLINE_POOL]).slice(0, REAL_HEADLINES_NEEDED);
+      shuffledRoasts.forEach(h => quizData.push({ headline: h, isRoast: true }));
+      shuffledReals.forEach(h => quizData.push({ headline: h, isRoast: false }));
+      quizData = shuffle(quizData);
+    }
 
     showQuestion();
     setupChoiceHandlers();
@@ -219,6 +232,37 @@
 
     document.getElementById('quiz-verdict').textContent = verdict;
 
+    const dailySummaryEl = document.getElementById('quiz-daily-summary');
+    const shareBtn = document.getElementById('quiz-share');
+    const downloadBtn = document.getElementById('quiz-download-card');
+    const shareCardWrap = document.getElementById('quiz-share-card-wrap');
+    const shareCardImg = document.getElementById('quiz-share-card-image');
+    if (quizMode === MODE_DAILY) {
+      const dailyState = updateDailyState(score, total, currentDayKey);
+      dailySummaryEl.textContent = `Daily challenge ${currentDayKey}: ${score}/${total}. Current streak: ${dailyState.streak} day${dailyState.streak === 1 ? '' : 's'}. Best daily score: ${dailyState.best.score}/${dailyState.best.total}.`;
+      dailySummaryEl.style.display = '';
+      shareBtn.style.display = '';
+      downloadBtn.style.display = '';
+
+      const card = createDailyShareCard(score, total, currentDayKey, dailyState.streak);
+      latestShareCardDataUrl = card.dataUrl;
+      latestShareCardBlob = card.blob;
+
+      shareCardImg.src = latestShareCardDataUrl;
+      shareCardWrap.style.display = '';
+
+      bindShareButton(shareBtn, score, total, currentDayKey, dailyState.streak);
+      bindDownloadCardButton(downloadBtn, currentDayKey);
+      updateDailyStatusUI();
+    } else {
+      dailySummaryEl.style.display = 'none';
+      shareBtn.style.display = 'none';
+      downloadBtn.style.display = 'none';
+      shareCardWrap.style.display = 'none';
+      latestShareCardDataUrl = '';
+      latestShareCardBlob = null;
+    }
+
     // Save score
     await saveScore(score, total);
     loadLeaderboard('leaderboard-list-results', 'quiz-leaderboard-results');
@@ -290,6 +334,266 @@
       [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
+  }
+
+  function getDayKey() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function buildDailyQuiz(roastHeadlines, dayKey) {
+    const roastNeed = TOTAL_QUESTIONS - REAL_HEADLINES_NEEDED;
+    const uniqueRoasts = [...new Set(roastHeadlines.map(h => String(h).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const roastPool = uniqueRoasts.length >= roastNeed ? uniqueRoasts : uniqueRoasts.concat([
+      'CEO Announces Mandatory Fun Week, Staff Immediately Opens LinkedIn',
+      'Company Deploys New AI Tool to Explain Why Existing AI Tool Failed',
+      'Man Opens One Browser Tab, Somehow Ends Up With 64',
+      'Local Team Holds Strategic Meeting About Why Meetings Are Too Long',
+      'Breaking: Deadline Extended, Panic Continues as Scheduled'
+    ]);
+
+    const roastPick = seededPick(roastPool, roastNeed, `${dayKey}-roast`).map((headline) => ({ headline, isRoast: true }));
+    const realPick = seededPick(REAL_HEADLINE_POOL, REAL_HEADLINES_NEEDED, `${dayKey}-real`).map((headline) => ({ headline, isRoast: false }));
+    return seededShuffle([...roastPick, ...realPick], `${dayKey}-mix`);
+  }
+
+  function seededPick(arr, count, seedStr) {
+    return seededShuffle(arr, seedStr).slice(0, count);
+  }
+
+  function seededShuffle(arr, seedStr) {
+    const a = [...arr];
+    let seed = seedFromString(seedStr);
+
+    for (let i = a.length - 1; i > 0; i--) {
+      seed = lcg(seed);
+      const j = seed % (i + 1);
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function seedFromString(input) {
+    let h = 2166136261;
+    for (let i = 0; i < input.length; i++) {
+      h ^= input.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function lcg(seed) {
+    return (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+  }
+
+  function getYesterdayDayKey(dayKey) {
+    const [y, m, d] = dayKey.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    date.setDate(date.getDate() - 1);
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function getDailyState() {
+    const key = 'tdr_quiz_daily_state';
+    let state = {
+      streak: 0,
+      best: { score: 0, total: TOTAL_QUESTIONS, day: '' },
+      days: {}
+    };
+
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return state;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        state = {
+          streak: Number(parsed.streak) || 0,
+          best: parsed.best || state.best,
+          days: parsed.days || {}
+        };
+      }
+    } catch (err) {
+      console.warn('Could not parse daily quiz state:', err);
+    }
+    return state;
+  }
+
+  function saveDailyState(state) {
+    try {
+      localStorage.setItem('tdr_quiz_daily_state', JSON.stringify(state));
+    } catch (err) {
+      console.warn('Could not save daily quiz state:', err);
+    }
+  }
+
+  function updateDailyState(currentScore, total, dayKey) {
+    const state = getDailyState();
+    const previousEntry = state.days[dayKey];
+
+    state.days[dayKey] = {
+      score: Math.max(currentScore, previousEntry ? Number(previousEntry.score) || 0 : 0),
+      total,
+      playedAt: new Date().toISOString()
+    };
+
+    const yesterday = getYesterdayDayKey(dayKey);
+    if (!previousEntry) {
+      state.streak = state.days[yesterday] ? (Number(state.streak) || 0) + 1 : 1;
+    }
+
+    if (currentScore > (Number(state.best.score) || 0)) {
+      state.best = { score: currentScore, total, day: dayKey };
+    }
+
+    saveDailyState(state);
+    return state;
+  }
+
+  function updateDailyStatusUI() {
+    const statusEl = document.getElementById('quiz-daily-status');
+    const dailyBtn = document.getElementById('quiz-start-daily');
+    if (!statusEl || !dailyBtn) return;
+
+    const dayKey = getDayKey();
+    const state = getDailyState();
+    const today = state.days[dayKey];
+
+    if (today) {
+      statusEl.textContent = `Today already played: ${today.score}/${today.total}. You can replay for practice.`;
+      dailyBtn.textContent = '🎯 Replay Daily Challenge';
+    } else {
+      statusEl.textContent = 'New daily challenge is ready.';
+      dailyBtn.textContent = '🎯 Daily Challenge';
+    }
+  }
+
+  function bindShareButton(btn, currentScore, total, dayKey, streak) {
+    const newBtn = btn.cloneNode(true);
+    btn.replaceWith(newBtn);
+
+    newBtn.addEventListener('click', async () => {
+      const text = `I scored ${currentScore}/${total} in today's Roast or Real Daily Challenge (${dayKey}) on The Daily Roast. Current streak: ${streak}. Can you beat me?`;
+      const url = `${window.location.origin}/quiz.html`;
+      const filename = `roast-or-real-${dayKey}.png`;
+
+      const shareImageBlob = await ensureShareCardBlob();
+      if (navigator.share) {
+        try {
+          if (shareImageBlob && navigator.canShare) {
+            const file = new File([shareImageBlob], filename, { type: 'image/png' });
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                title: 'Roast or Real Daily Challenge',
+                text,
+                url,
+                files: [file]
+              });
+              return;
+            }
+          }
+
+          await navigator.share({ title: 'Roast or Real Daily Challenge', text, url });
+          return;
+        } catch (err) {
+          // Fall back to clipboard below.
+        }
+      }
+
+      try {
+        await navigator.clipboard.writeText(`${text} ${url}`);
+        newBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          newBtn.textContent = '🔗 Share Daily Score';
+        }, 1500);
+      } catch (err) {
+        alert('Unable to share right now.');
+      }
+    });
+  }
+
+  function bindDownloadCardButton(btn, dayKey) {
+    const newBtn = btn.cloneNode(true);
+    btn.replaceWith(newBtn);
+
+    newBtn.addEventListener('click', async () => {
+      const dataUrl = latestShareCardDataUrl;
+      if (!dataUrl) return;
+
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `roast-or-real-${dayKey}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+  }
+
+  async function ensureShareCardBlob() {
+    if (latestShareCardBlob) return latestShareCardBlob;
+    if (!latestShareCardDataUrl) return null;
+
+    try {
+      const res = await fetch(latestShareCardDataUrl);
+      latestShareCardBlob = await res.blob();
+      return latestShareCardBlob;
+    } catch {
+      return null;
+    }
+  }
+
+  function createDailyShareCard(currentScore, total, dayKey, streak) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 630;
+    const ctx = canvas.getContext('2d');
+
+    const bg = ctx.createLinearGradient(0, 0, 1200, 630);
+    bg.addColorStop(0, '#1b2838');
+    bg.addColorStop(0.6, '#24384f');
+    bg.addColorStop(1, '#2f4d69');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.09)';
+    ctx.fillRect(60, 60, 1080, 510);
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(60, 60, 1080, 510);
+
+    ctx.fillStyle = '#ffc107';
+    ctx.font = '700 34px Inter, Arial, sans-serif';
+    ctx.fillText('THE DAILY ROAST', 100, 128);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 70px Inter, Arial, sans-serif';
+    ctx.fillText('Roast or Real', 100, 245);
+
+    ctx.fillStyle = '#cfe1f0';
+    ctx.font = '600 34px Inter, Arial, sans-serif';
+    ctx.fillText(`Daily Challenge - ${dayKey}`, 100, 300);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 120px Inter, Arial, sans-serif';
+    ctx.fillText(`${currentScore}/${total}`, 100, 445);
+
+    ctx.fillStyle = '#ffdfae';
+    ctx.font = '700 34px Inter, Arial, sans-serif';
+    ctx.fillText(`Streak: ${streak} day${streak === 1 ? '' : 's'}`, 100, 500);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = '600 28px Inter, Arial, sans-serif';
+    ctx.fillText('Can you beat this score?', 720, 520);
+
+    return {
+      dataUrl: canvas.toDataURL('image/png'),
+      blob: null
+    };
   }
 
   // Footer year

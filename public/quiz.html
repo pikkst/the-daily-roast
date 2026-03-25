@@ -56,9 +56,15 @@
             We'll show you 10 headlines. Some are real news, some are from The Daily Roast.<br>
             Your job: figure out which is which. 🕵️
           </p>
-          <button class="quiz-next-btn" id="quiz-start-btn" style="font-size:1.1rem; padding: 16px 48px;">
-            🔥 Let's Play!
-          </button>
+          <div class="quiz-mode-select">
+            <button class="quiz-next-btn" id="quiz-start-classic" style="font-size:1.05rem; padding: 14px 30px;">
+              🔥 Classic Mode
+            </button>
+            <button class="quiz-next-btn quiz-next-btn--alt" id="quiz-start-daily" style="font-size:1.05rem; padding: 14px 30px;">
+              🎯 Daily Challenge
+            </button>
+          </div>
+          <p class="quiz-daily-status" id="quiz-daily-status">New daily challenge is ready.</p>
         </div>
 
         <!-- Leaderboard -->
@@ -96,8 +102,14 @@
             <div class="quiz-score-display" id="final-score">0/10</div>
             <div class="quiz-score-label">headlines correctly identified</div>
             <div class="quiz-verdict" id="quiz-verdict"></div>
+            <div class="quiz-daily-summary" id="quiz-daily-summary" style="display:none;"></div>
+            <div class="quiz-share-card-wrap" id="quiz-share-card-wrap" style="display:none;">
+              <img id="quiz-share-card-image" class="quiz-share-card-image" alt="Daily challenge share card preview">
+            </div>
             <div class="quiz-actions">
               <button class="btn btn-primary" id="quiz-replay">🔄 Play Again</button>
+              <button class="btn btn-outline" id="quiz-share" style="display:none;">🔗 Share Daily Score</button>
+              <button class="btn btn-outline" id="quiz-download-card" style="display:none;">🖼️ Download Card</button>
               <a href="/" class="btn btn-outline">📰 Read Some Roasts</a>
             </div>
           </div>

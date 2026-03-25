@@ -41,6 +41,12 @@
       "short_name": "Radio",
       "url": "/radio",
       "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Weekly Top 10",
+      "short_name": "Weekly",
+      "url": "/weekly",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
     }
   ]
 }

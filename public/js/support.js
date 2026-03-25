@@ -145,9 +145,12 @@
     // Load Stripe if configured
     loadStripe();
 
-    // Bind all donation buttons on the page
-    document.querySelectorAll('.donation-btn').forEach(btn => {
-      btn.addEventListener('click', () => handleDonationClick(btn));
+    // Delegated handler so dynamically shown donation buttons also work.
+    document.addEventListener('click', (event) => {
+      const btn = event.target.closest('.donation-btn');
+      if (!btn) return;
+      event.preventDefault();
+      handleDonationClick(btn);
     });
 
     // Bind article page newsletter form

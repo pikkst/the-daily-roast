@@ -33,6 +33,10 @@ GitHub Actions runs generation script daily (6AM + 6PM UTC)
 3. Copy and paste the contents of `scripts/setup-database.sql`
 4. Click **Run** — this creates all tables, indexes, RLS policies, and seed data
 
+Then run `scripts/setup-roast-automation.sql` in Supabase SQL Editor to create:
+- `daily_roast_lock` (fixed daily winner snapshot)
+- `weekly_roast_summaries` and `weekly_roast_items` (weekly Top 10)
+
 ### 2. Local Development
 
 ```bash
@@ -54,6 +58,12 @@ export SUPABASE_SERVICE_KEY="your-supabase-service-role-key"
 
 # Generate articles
 npm run generate
+
+# Lock today's Roast of the Day snapshot
+npm run lock-roast
+
+# Generate weekly Top 10 summary
+npm run weekly-top10
 ```
 
 ### 4. GitHub Repository Setup
@@ -106,6 +116,7 @@ Cloudflare will automatically redeploy whenever you push to the `main` branch.
 │       └── article.js        # Article page logic
 ├── scripts/
 │   ├── setup-database.sql    # Supabase schema + seed data
+│   ├── setup-roast-automation.sql # Daily lock + weekly Top 10 tables
 │   └── generate-articles.mjs # AI article generation engine
 ├── .github/
 │   └── workflows/
@@ -181,6 +192,8 @@ schedule:
   - cron: '0 6 * * *'   # 6 AM UTC
   - cron: '0 18 * * *'  # 6 PM UTC
 ```
+
+Weekly Top 10 generation runs from `.github/workflows/weekly-top10.yml`.
 
 ### Manual Article Generation
 
