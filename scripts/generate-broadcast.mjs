@@ -185,18 +185,18 @@ function injectLiveNotice(script, liveNotice) {
     noticeLines = [
       {
         speaker: 'Joe',
-        text: `Quick local check before we dive in: it's ${liveNotice.localDate}, about ${liveNotice.localTime} in ${liveNotice.location}.`
+        text: `Quick local check before we dive in: it's ${liveNotice.localDate}, about ${liveNotice.localTime}.`
       },
       {
         speaker: 'Jane',
-        text: `Outside in ${liveNotice.location} right now: ${liveNotice.summary}. Basically, dress for drama and keep your coffee close.`
+        text: `Outside right now: ${liveNotice.summary}. Basically, dress for drama and keep your coffee close.`
       }
     ];
   } else if (styleIndex === 1) {
     noticeLines = [
       {
         speaker: 'Jane',
-        text: `Live from ${liveNotice.location}: calendar says ${liveNotice.localDate}, the clock says ${liveNotice.localTime}, and yes, we are very much on the air.`
+        text: `Calendar says ${liveNotice.localDate}, the clock says ${liveNotice.localTime}, and yes, we are very much on the air.`
       },
       {
         speaker: 'Joe',
@@ -207,11 +207,11 @@ function injectLiveNotice(script, liveNotice) {
     noticeLines = [
       {
         speaker: 'Joe',
-        text: `Time stamp for the roast: ${liveNotice.localDate}, ${liveNotice.localTime} in ${liveNotice.location}.`
+        text: `Time stamp for the roast: ${liveNotice.localDate}, ${liveNotice.localTime}.`
       },
       {
         speaker: 'Jane',
-        text: `And the weather in ${liveNotice.location}: ${liveNotice.summary}. Good conditions for headlines, questionable conditions for hairstyles.`
+        text: `And the weather outside: ${liveNotice.summary}. Good conditions for headlines, questionable conditions for hairstyles.`
       }
     ];
   }

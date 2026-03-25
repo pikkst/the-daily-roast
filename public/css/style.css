@@ -3267,7 +3267,14 @@ button {
     width: 44px;
     height: 44px;
   }
-  .radio-bgm-wrap {
-    display: none;
+  .radio-controls-right {
+    gap: 10px;
+  }
+  .radio-bgm-label {
+    font-size: 0.56rem;
+  }
+  .radio-bgm-slider,
+  .radio-volume-slider {
+    width: 54px;
   }
 }
