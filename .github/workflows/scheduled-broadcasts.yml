@@ -1,0 +1,46 @@
+name: Scheduled Broadcasts
+
+on:
+  # Fixed UTC schedule for broadcasts: 06:00, 12:00, 18:00
+  schedule:
+    - cron: '0 6,12,18 * * *'
+
+  # Manual trigger
+  workflow_dispatch:
+
+concurrency:
+  group: broadcast-generator
+  cancel-in-progress: false
+
+jobs:
+  generate-broadcast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate broadcast
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          echo "📻 Generating scheduled broadcast..."
+          node scripts/generate-broadcast.mjs
+
+      - name: Report status
+        if: always()
+        run: |
+          echo "📅 Broadcast run completed at $(date -u)"
+          echo "📻 Scheduled broadcast workflow finished"
