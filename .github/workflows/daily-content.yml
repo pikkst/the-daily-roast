@@ -138,7 +138,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          ENFORCE_TALLINN_SLOT_TIME: '1'
+          ENFORCE_TALLINN_SLOT_TIME: ${{ github.event_name == 'schedule' && '1' || '0' }}
         run: |
           echo "📻 Generating broadcast after article pipeline..."
           node scripts/generate-broadcast.mjs
