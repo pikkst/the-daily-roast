@@ -140,8 +140,18 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           ENFORCE_TALLINN_SLOT_TIME: ${{ github.event_name == 'schedule' && '1' || '0' }}
         run: |
+          tallinn_hh="$(TZ=Europe/Tallinn date +%H)"
+          if [ "$tallinn_hh" -ge 21 ]; then
+            broadcast_slot="evening"
+          elif [ "$tallinn_hh" -ge 15 ]; then
+            broadcast_slot="afternoon"
+          else
+            broadcast_slot="morning"
+          fi
+
           echo "📻 Generating broadcast after article pipeline..."
-          node scripts/generate-broadcast.mjs
+          echo "🕒 Tallinn hour $tallinn_hh -> BROADCAST_SLOT=$broadcast_slot"
+          BROADCAST_SLOT="$broadcast_slot" node scripts/generate-broadcast.mjs
 
       - name: Upload latest broadcast to YouTube
         env:
