@@ -937,6 +937,75 @@ async function generateAudio(script, retries = 2) {
   const ttsPrompt = `TTS the following conversation between Joe and Jane:\n` +
     script.map(line => `${line.speaker}: ${line.text}`).join('\n');
 
+  const wordCount = script
+    .map(line => String(line.text || ''))
+    .join(' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .length;
+
+  // 2.7 words/sec is a conservative long-form speech pace.
+  const expectedSeconds = Math.max(60, Math.round(wordCount / 2.7));
+  const suspiciousMinSeconds = Math.max(120, Math.floor(expectedSeconds * 0.55));
+
+  function parsePcmAudioBase64(response) {
+    return response?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+  }
+
+  async function generateChunkAudio(chunkLines) {
+    const chunkPrompt = `TTS the following conversation between Joe and Jane:\n` +
+      chunkLines.map(line => `${line.speaker}: ${line.text}`).join('\n');
+
+    const response = await genai.models.generateContent({
+      model: 'gemini-2.5-flash-preview-tts',
+      contents: [{ parts: [{ text: chunkPrompt }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          multiSpeakerVoiceConfig: {
+            speakerVoiceConfigs: [
+              {
+                speaker: 'Joe',
+                voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } }
+              },
+              {
+                speaker: 'Jane',
+                voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
+              }
+            ]
+          }
+        }
+      }
+    });
+
+    const audioBase64 = parsePcmAudioBase64(response);
+    if (!audioBase64 || audioBase64.length < 100) {
+      throw new Error('Chunk TTS returned invalid audio data');
+    }
+    return pcmToWavBuffer(audioBase64, 24000);
+  }
+
+  async function generateAudioChunked() {
+    const maxLinesPerChunk = 16;
+    const chunks = [];
+    for (let i = 0; i < script.length; i += maxLinesPerChunk) {
+      chunks.push(script.slice(i, i + maxLinesPerChunk));
+    }
+
+    const wavChunks = [];
+    for (let i = 0; i < chunks.length; i++) {
+      console.log(`  🔁 Chunked TTS ${i + 1}/${chunks.length}...`);
+      const chunkWav = await generateChunkAudio(chunks[i]);
+      wavChunks.push(chunkWav);
+      await sleep(1200);
+    }
+
+    const mergedWav = mergeWavBuffers(wavChunks, 24000);
+    const durationSeconds = Math.round(mergedWav.length / (24000 * 2));
+    return { wavBuffer: mergedWav, durationSeconds, chunked: true };
+  }
+
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const response = await genai.models.generateContent({
@@ -961,7 +1030,7 @@ async function generateAudio(script, retries = 2) {
         }
       });
 
-      const audioBase64 = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      const audioBase64 = parsePcmAudioBase64(response);
 
       if (!audioBase64 || audioBase64.length < 100) {
         throw new Error('Invalid or empty audio data from TTS');
@@ -970,6 +1039,13 @@ async function generateAudio(script, retries = 2) {
       // Convert PCM to WAV
       const wavBuffer = pcmToWavBuffer(audioBase64, 24000);
       const durationSeconds = Math.round(wavBuffer.length / (24000 * 2)); // 16-bit mono
+
+      if (durationSeconds < suspiciousMinSeconds) {
+        console.warn(`  ⚠️  Full-pass TTS likely truncated (${durationSeconds}s, expected around ${expectedSeconds}s). Switching to chunked TTS...`);
+        const chunked = await generateAudioChunked();
+        console.log(`  ✅ Audio generated (chunked): ~${Math.round(chunked.durationSeconds / 60)} minutes`);
+        return { wavBuffer: chunked.wavBuffer, durationSeconds: chunked.durationSeconds };
+      }
 
       console.log(`  ✅ Audio generated: ~${Math.round(durationSeconds / 60)} minutes`);
       return { wavBuffer, durationSeconds };
@@ -1016,6 +1092,39 @@ function pcmToWavBuffer(pcmBase64, sampleRate) {
   header.writeUInt32LE(dataSize, 40);
 
   return Buffer.concat([header, pcmData]);
+}
+
+function mergeWavBuffers(wavBuffers, sampleRate) {
+  const valid = (wavBuffers || []).filter(Boolean);
+  if (valid.length === 0) return null;
+  if (valid.length === 1) return valid[0];
+
+  const pcmParts = valid.map((wav) => Buffer.from(wav).slice(44));
+  const mergedPcm = Buffer.concat(pcmParts);
+
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+  const blockAlign = (numChannels * bitsPerSample) / 8;
+  const dataSize = mergedPcm.length;
+  const chunkSize = 36 + dataSize;
+
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0);
+  header.writeUInt32LE(chunkSize, 4);
+  header.write('WAVE', 8);
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(numChannels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write('data', 36);
+  header.writeUInt32LE(dataSize, 40);
+
+  return Buffer.concat([header, mergedPcm]);
 }
 
 // ---------- Step 4: Generate Cover Image ----------
