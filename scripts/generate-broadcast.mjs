@@ -18,6 +18,10 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { GoogleGenAI, Modality } from '@google/genai';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawn } from 'node:child_process';
 
 // ---------- Configuration ----------
 
@@ -52,6 +56,168 @@ const TALLINN_TIMEZONE = 'Europe/Tallinn';
 const POLTSAMAA = { name: 'Poltsamaa, Estonia', latitude: 58.6525, longitude: 25.9717 };
 const BROADCAST_SLOT = (process.env.BROADCAST_SLOT || '').trim().toLowerCase();
 const ENFORCE_TALLINN_SLOT_TIME = process.env.ENFORCE_TALLINN_SLOT_TIME === '1';
+const parsedBgmVolume = Number(process.env.BGM_VOLUME || '0.10');
+const BGM_VOLUME = Number.isFinite(parsedBgmVolume)
+  ? Math.min(1, Math.max(0, parsedBgmVolume))
+  : 0.10;
+const BGM_THEMES = ['upbeat', 'chill', 'funky', 'dramatic'];
+
+function parseListEnv(value) {
+  return String(value || '')
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean);
+}
+
+function buildBgmCatalog() {
+  const catalog = {
+    upbeat: parseListEnv(process.env.BGM_TRACK_UPBEAT),
+    chill: parseListEnv(process.env.BGM_TRACK_CHILL),
+    funky: parseListEnv(process.env.BGM_TRACK_FUNKY),
+    dramatic: parseListEnv(process.env.BGM_TRACK_DRAMATIC)
+  };
+
+  const rawJson = String(process.env.BGM_TRACKS_JSON || '').trim();
+  if (!rawJson) return catalog;
+
+  try {
+    const parsed = JSON.parse(rawJson);
+    for (const theme of BGM_THEMES) {
+      if (Array.isArray(parsed?.[theme])) {
+        catalog[theme] = parsed[theme].map(v => String(v || '').trim()).filter(Boolean);
+      }
+    }
+  } catch (err) {
+    console.warn(`  ⚠️  Invalid BGM_TRACKS_JSON: ${err.message}`);
+  }
+
+  return catalog;
+}
+
+const BGM_CATALOG = buildBgmCatalog();
+
+function normalizeBgmTheme(rawTheme) {
+  const theme = String(rawTheme || '').trim().toLowerCase();
+  return BGM_THEMES.includes(theme) ? theme : 'upbeat';
+}
+
+function isHttpUrl(value) {
+  return /^https?:\/\//i.test(String(value || ''));
+}
+
+function getTrackExtension(track) {
+  try {
+    if (isHttpUrl(track)) {
+      const url = new URL(track);
+      const ext = path.extname(url.pathname || '').toLowerCase();
+      return ext || '.mp3';
+    }
+  } catch {
+    // fall through to local-path logic
+  }
+
+  const ext = path.extname(String(track || '')).toLowerCase();
+  return ext || '.mp3';
+}
+
+function pickBgmTrack(theme) {
+  const normalized = normalizeBgmTheme(theme);
+  const tracks = BGM_CATALOG[normalized] || [];
+  if (tracks.length === 0) return null;
+
+  // Deterministic daily rotation to avoid repeating exactly the same track every run.
+  const dayBucket = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+  const index = dayBucket % tracks.length;
+  return tracks[index];
+}
+
+function runCommand(cmd, args, stdio = 'pipe') {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, { stdio });
+    let stderr = '';
+
+    if (child.stderr) {
+      child.stderr.on('data', (chunk) => {
+        stderr += String(chunk || '');
+      });
+    }
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`${cmd} exited with code ${code}: ${stderr.slice(0, 400)}`));
+      }
+    });
+    child.on('error', reject);
+  });
+}
+
+async function fetchBinary(url) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
+  if (!res.ok) throw new Error(`Download failed (${res.status}) from ${url}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+async function mixBackgroundMusic(speechWavBuffer, bgmTheme) {
+  const selectedTheme = normalizeBgmTheme(bgmTheme);
+  const selectedTrack = pickBgmTrack(selectedTheme);
+  if (!selectedTrack) {
+    console.log('  🎵 No BGM tracks configured, keeping voice-only audio.');
+    return {
+      wavBuffer: speechWavBuffer,
+      bgmTheme: selectedTheme,
+      bgmTrack: null,
+      mixed: false
+    };
+  }
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'daily-roast-bgm-'));
+  const speechPath = path.join(tmpDir, 'speech.wav');
+  const bgmPath = path.join(tmpDir, `bgm-source${getTrackExtension(selectedTrack)}`);
+  const mixedPath = path.join(tmpDir, 'broadcast-mixed.wav');
+
+  try {
+    fs.writeFileSync(speechPath, speechWavBuffer);
+
+    if (isHttpUrl(selectedTrack)) {
+      const bgmData = await fetchBinary(selectedTrack);
+      fs.writeFileSync(bgmPath, bgmData);
+    } else {
+      const resolved = path.isAbsolute(selectedTrack)
+        ? selectedTrack
+        : path.resolve(process.cwd(), selectedTrack);
+      if (!fs.existsSync(resolved)) {
+        throw new Error(`Configured BGM track not found: ${resolved}`);
+      }
+      fs.copyFileSync(resolved, bgmPath);
+    }
+
+    const safeVolume = BGM_VOLUME.toFixed(3);
+    await runCommand('ffmpeg', [
+      '-y',
+      '-i', speechPath,
+      '-stream_loop', '-1',
+      '-i', bgmPath,
+      '-filter_complex', `[1:a]volume=${safeVolume}[bgm];[0:a][bgm]amix=inputs=2:duration=first:dropout_transition=2,alimiter=limit=0.95[aout]`,
+      '-map', '[aout]',
+      '-ar', '24000',
+      '-ac', '1',
+      '-c:a', 'pcm_s16le',
+      mixedPath
+    ]);
+
+    const mixedBuffer = fs.readFileSync(mixedPath);
+    return {
+      wavBuffer: mixedBuffer,
+      bgmTheme: selectedTheme,
+      bgmTrack: selectedTrack,
+      mixed: true
+    };
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
 
 function getTallinnNow(now = new Date()) {
   return new Date(now.toLocaleString('en-US', { timeZone: TALLINN_TIMEZONE }));
@@ -384,7 +550,7 @@ async function generateScript(articles, liveNotice, continuityNotes, edition, re
     `- [${CATEGORY_ICONS[a.category_slug]} ${a.category_name}] "${a.title}" — ${a.excerpt}`
   ).join('\n');
 
-  const prompt = `You are the head writer for "The Daily Roast Radio" — a hilarious daily comedy news podcast hosted by two anchors:
+  const prompt = `You are the head writer for "The Daily Roast Radio" — a sharp, story-first comedy news podcast hosted by two anchors:
 
 **Joe** — The dry, sarcastic anchor. Deadpan delivery, world-weary cynicism, loves a good pun. Think a mix of Jon Stewart's wit and Ron Burgundy's unearned confidence.
 **Jane** — The energetic, sharp co-host. Quick-witted, slightly chaotic energy, prone to tangential jokes. She's the one who makes Joe break character.
@@ -406,10 +572,18 @@ WRITE A COMPLETE RADIO SHOW SCRIPT covering ALL ${articles.length} stories. The 
 2. **INTRO** — Brief banter between Joe and Jane (who we are, what day it is)
 3. **STORY SEGMENTS** — For each of the ${articles.length} stories:
    - Quick transition/jingle reference (e.g., "Moving on to..." or "And now, from the world of...")
-   - Host reads the headline, then both react and riff on it
-   - 4-8 lines of dialogue per story with genuine comedy
+  - Host reads the headline, then both react and riff on it
+  - Include a concise "what happened" recap and a clear "why this matters" angle before the biggest joke run
+  - 6-10 lines of dialogue per story with genuine comedy
    - Include at least one fictional "expert quote" or "listener call-in" per story
 4. **WRAP-UP** — Final banter, use the edition-specific signoff instruction above
+
+CONTENT QUALITY RULES (VERY IMPORTANT):
+- Be specific to each provided story; avoid generic commentary that could fit any headline.
+- Every story segment must contain at least 2 concrete details from the headline/excerpt context (names, places, numbers, policy/action, timeline, consequence).
+- Treat each segment like mini-editorial satire: first clarity, then absurdity.
+- Use one perspective shift per story (citizen angle, business angle, policy angle, culture angle, or global angle).
+- Vary pacing: quick jab -> analysis beat -> callback -> stronger punchline.
 
 COMEDY STYLE:
 - Deadpan absurdity (treat insane things as normal)
@@ -418,11 +592,20 @@ COMEDY STYLE:
 - Pop culture references and callbacks
 - Running jokes that recur through the show
 - Each line should be ~1-3 sentences (natural speech pacing)
+- Keep hosts distinct: Joe = dry and surgical; Jane = energetic and surprising.
+- Prefer clever comparisons/metaphors over random nonsense.
+
+HUMOR GUARDRAILS:
+- No repeated punchline structure across segments.
+- No lazy filler lines like "wow that's wild" without adding substance.
+- Keep satire punchy but coherent; listener should always understand the underlying story.
+- Avoid punching down at vulnerable groups; target power, systems, hypocrisy, and public absurdity.
 
 IMPORTANT:
 - Do NOT include date/time/weather bulletin lines. They are inserted automatically after generation.
 - If a headline was already covered earlier today, treat it as a follow-up with a clearly new angle.
 - Avoid reusing the same punchline or setup from earlier broadcasts listed in context.
+- Output only spoken script lines (no stage directions, no SFX markers, no narrator labels).
 
 Also choose a background music theme from: upbeat, chill, funky, dramatic
 
@@ -435,7 +618,9 @@ Return ONLY valid JSON:
   "bgmTheme": "upbeat"
 }
 
-The script should have 60-90 lines total (~15 minutes of audio). Every line must be funny or set up something funny. No filler, no dead air.`;
+The script should have 70-100 lines total (~15 minutes of audio).
+Target ratio: ~65% meaningful story substance, ~35% humor and punchlines.
+Every line must either add information, escalate a joke, or move the segment forward. No filler, no dead air.`;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -780,10 +965,26 @@ async function main() {
   const audioResult = await generateAudio(scriptData.script);
 
   let audioUrl = null;
+  let finalBgmTheme = normalizeBgmTheme(scriptData.bgmTheme);
+  let selectedBgmTrack = null;
   if (audioResult) {
+    let finalAudioBuffer = audioResult.wavBuffer;
+
+    try {
+      const mixed = await mixBackgroundMusic(audioResult.wavBuffer, scriptData.bgmTheme);
+      finalAudioBuffer = mixed.wavBuffer;
+      finalBgmTheme = mixed.bgmTheme;
+      selectedBgmTrack = mixed.bgmTrack;
+      if (mixed.mixed) {
+        console.log(`  🎚️  BGM mixed at ${Math.round(BGM_VOLUME * 100)}% volume`);
+      }
+    } catch (mixErr) {
+      console.warn(`  ⚠️  BGM mix failed, using voice-only audio: ${mixErr.message}`);
+    }
+
     // Upload audio
     console.log('\n📤 Uploading audio to Supabase Storage...');
-    audioUrl = await uploadAudio(db, audioResult.wavBuffer);
+    audioUrl = await uploadAudio(db, finalAudioBuffer);
   } else {
     console.warn('⚠️  Audio generation failed — broadcast will have script only');
   }
@@ -812,7 +1013,7 @@ async function main() {
     script: scriptData.script,
     audioUrl,
     coverImageUrl,
-    bgmTheme: scriptData.bgmTheme || 'upbeat',
+    bgmTheme: finalBgmTheme,
     articles,
     durationSeconds: audioResult?.durationSeconds || 0
   });
@@ -825,7 +1026,8 @@ async function main() {
   console.log(`  📝 Script: ${scriptData.script.length} lines`);
   console.log(`  🔊 Audio: ${audioUrl ? '✅' : '❌ (script only)'}`);
   console.log(`  🎨 Cover: ${coverImageUrl ? '✅' : '❌ (no cover)'}`);
-  console.log(`  🎵 BGM: ${scriptData.bgmTheme}`);
+  console.log(`  🎵 BGM theme: ${finalBgmTheme}`);
+  console.log(`  🎼 BGM track: ${selectedBgmTrack || 'none configured (voice-only)'}`);
   console.log(`  📰 Articles: ${articles.length} categories`);
   console.log(`  ⏱️  Duration: ~${Math.round((audioResult?.durationSeconds || 0) / 60)} min`);
   console.log(`  💾 Saved: ${broadcast ? '✅' : '❌'}`);

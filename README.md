@@ -193,6 +193,12 @@ Cloudflare will automatically redeploy whenever you push to the `main` branch.
 | `YT_REFRESH_TOKEN` | OAuth refresh token with YouTube upload scope | For YouTube upload |
 | `YT_PRIVACY_STATUS` | `public`, `unlisted`, or `private` | No |
 | `YT_PODCAST_PLAYLIST_ID` | YouTube playlist ID to also add each uploaded episode (optional) | No |
+| `BGM_VOLUME` | Background music volume for generated radio audio (`0.10` = 10%) | No |
+| `BGM_TRACKS_JSON` | JSON track catalog by theme (`upbeat/chill/funky/dramatic`) | No |
+| `BGM_TRACK_UPBEAT` | Comma-separated fallback track URLs/paths for upbeat theme | No |
+| `BGM_TRACK_CHILL` | Comma-separated fallback track URLs/paths for chill theme | No |
+| `BGM_TRACK_FUNKY` | Comma-separated fallback track URLs/paths for funky theme | No |
+| `BGM_TRACK_DRAMATIC` | Comma-separated fallback track URLs/paths for dramatic theme | No |
 
 ### Adjusting Generation Schedule
 
@@ -208,6 +214,20 @@ Radio broadcast generation + YouTube upload runs 3x daily from `.github/workflow
 
 If `YT_PODCAST_PLAYLIST_ID` is set, each uploaded video is also added to that playlist.
 For YouTube Podcasts, create or mark the playlist as a Podcast in YouTube Studio first.
+
+Generated radio audio supports optional background music mixing with default volume at 10%.
+Use free or licensed tracks from sources like Pixabay Music, Uppbeat, Artlist, or Epidemic and provide links via `BGM_TRACKS_JSON` (or `BGM_TRACK_*` fallback vars).
+
+Example `BGM_TRACKS_JSON`:
+
+```json
+{
+  "upbeat": ["https://example.com/upbeat-1.mp3", "https://example.com/upbeat-2.mp3"],
+  "chill": ["https://example.com/chill-1.mp3"],
+  "funky": ["https://example.com/funky-1.mp3"],
+  "dramatic": ["https://example.com/dramatic-1.mp3"]
+}
+```
 
 Weekly Top 10 generation runs from `.github/workflows/weekly-top10.yml`.
 
