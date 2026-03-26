@@ -192,6 +192,7 @@ Cloudflare will automatically redeploy whenever you push to the `main` branch.
 | `YT_CLIENT_SECRET` | Google OAuth Client Secret | For YouTube upload |
 | `YT_REFRESH_TOKEN` | OAuth refresh token with YouTube upload scope | For YouTube upload |
 | `YT_PRIVACY_STATUS` | `public`, `unlisted`, or `private` | No |
+| `YT_PODCAST_PLAYLIST_ID` | YouTube playlist ID to also add each uploaded episode (optional) | No |
 
 ### Adjusting Generation Schedule
 
@@ -204,6 +205,9 @@ schedule:
 ```
 
 Radio broadcast generation + YouTube upload runs 3x daily from `.github/workflows/scheduled-broadcasts.yml`.
+
+If `YT_PODCAST_PLAYLIST_ID` is set, each uploaded video is also added to that playlist.
+For YouTube Podcasts, create or mark the playlist as a Podcast in YouTube Studio first.
 
 Weekly Top 10 generation runs from `.github/workflows/weekly-top10.yml`.
 

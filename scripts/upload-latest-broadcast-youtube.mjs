@@ -10,6 +10,7 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const YT_CLIENT_ID = process.env.YT_CLIENT_ID;
 const YT_CLIENT_SECRET = process.env.YT_CLIENT_SECRET;
 const YT_REFRESH_TOKEN = process.env.YT_REFRESH_TOKEN;
+const YT_PODCAST_PLAYLIST_ID = (process.env.YT_PODCAST_PLAYLIST_ID || '').trim();
 const SITE_URL = process.env.SITE_URL || 'https://the-daily-roast-66e.pages.dev';
 
 function resolvePrivacyStatus(rawValue) {
@@ -140,11 +141,7 @@ async function renderMp4(row) {
   return { tmpDir, videoPath };
 }
 
-async function uploadToYouTube(row, videoPath) {
-  const oauth2Client = new google.auth.OAuth2(YT_CLIENT_ID, YT_CLIENT_SECRET);
-  oauth2Client.setCredentials({ refresh_token: YT_REFRESH_TOKEN });
-
-  const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
+async function uploadToYouTube(youtube, row, videoPath) {
 
   const response = await youtube.videos.insert({
     part: ['snippet', 'status'],
@@ -172,6 +169,21 @@ async function uploadToYouTube(row, videoPath) {
     videoId,
     youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`
   };
+}
+
+async function addVideoToPlaylist(youtube, videoId, playlistId) {
+  await youtube.playlistItems.insert({
+    part: ['snippet'],
+    requestBody: {
+      snippet: {
+        playlistId,
+        resourceId: {
+          kind: 'youtube#video',
+          videoId
+        }
+      }
+    }
+  });
 }
 
 async function markStatus(rowId, hasYoutubeColumn, status, extra = {}) {
@@ -211,7 +223,20 @@ async function main() {
     tmpDir = rendered.tmpDir;
 
     await markStatus(row.id, hasYoutubeColumn, 'uploading');
-    const uploaded = await uploadToYouTube(row, rendered.videoPath);
+    const oauth2Client = new google.auth.OAuth2(YT_CLIENT_ID, YT_CLIENT_SECRET);
+    oauth2Client.setCredentials({ refresh_token: YT_REFRESH_TOKEN });
+    const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
+
+    const uploaded = await uploadToYouTube(youtube, row, rendered.videoPath);
+
+    if (YT_PODCAST_PLAYLIST_ID) {
+      try {
+        await addVideoToPlaylist(youtube, uploaded.videoId, YT_PODCAST_PLAYLIST_ID);
+        console.log(`Podcast playlist add complete: ${YT_PODCAST_PLAYLIST_ID}`);
+      } catch (playlistErr) {
+        console.warn(`Podcast playlist add failed: ${playlistErr.message || playlistErr}`);
+      }
+    }
 
     await markStatus(row.id, hasYoutubeColumn, 'uploaded', {
       youtube_video_id: uploaded.videoId,

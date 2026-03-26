@@ -122,6 +122,7 @@ jobs:
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
           YT_PRIVACY_STATUS: ${{ vars.YT_PRIVACY_STATUS || secrets.YT_PRIVACY_STATUS || 'public' }}
+          YT_PODCAST_PLAYLIST_ID: ${{ vars.YT_PODCAST_PLAYLIST_ID || secrets.YT_PODCAST_PLAYLIST_ID || '' }}
         run: |
           echo "🎬 Rendering MP4 and uploading to YouTube..."
           node scripts/upload-latest-broadcast-youtube.mjs
