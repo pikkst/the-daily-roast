@@ -1,23 +1,15 @@
 name: Daily Roast Pipeline
 
 on:
-  # Run 3x daily at exact Tallinn slots: 09:00, 15:00, 21:00.
+  # Run once per day at Tallinn midnight (00:00).
   # Cron is UTC, so we include both seasonal UTC variants and gate in-job.
   schedule:
-    - cron: '0 6,12,18 * * *'
-    - cron: '0 7,13,19 * * *'
+    - cron: '0 21 * * *'
+    - cron: '0 22 * * *'
 
   # Manual trigger from GitHub Actions tab
   workflow_dispatch:
     inputs:
-      run_mode:
-        description: 'Manual run mode'
-        required: false
-        type: choice
-        default: broadcast_only
-        options:
-          - broadcast_only
-          - full_pipeline
       article_count:
         description: 'Number of articles (0 = all found topics)'
         required: false
@@ -36,57 +28,42 @@ jobs:
       should_run: ${{ steps.slot_check.outputs.should_run }}
 
     steps:
-      - name: Check Tallinn slot window
+      - name: Check Tallinn midnight window
         id: slot_check
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "🧪 Manual run: slot gate bypassed"
+            echo "🧪 Manual run: midnight gate bypassed"
             exit 0
           fi
 
-          utc_hh="$(date -u +%H)"
-          tallinn_offset="$(TZ=Europe/Tallinn date +%z)"
+          tallinn_hh="$(TZ=Europe/Tallinn date +%H)"
           tallinn_hhmm="$(TZ=Europe/Tallinn date +%H:%M)"
-
-          # Winter (UTC+2): 09/15/21 Tallinn => 07/13/19 UTC
-          # Summer (UTC+3): 09/15/21 Tallinn => 06/12/18 UTC
-          should_run=false
-          if [ "$tallinn_offset" = "+0200" ]; then
-            if [ "$utc_hh" = "07" ] || [ "$utc_hh" = "13" ] || [ "$utc_hh" = "19" ]; then
-              should_run=true
-            fi
-          elif [ "$tallinn_offset" = "+0300" ]; then
-            if [ "$utc_hh" = "06" ] || [ "$utc_hh" = "12" ] || [ "$utc_hh" = "18" ]; then
-              should_run=true
-            fi
-          fi
-
-          if [ "$should_run" = "true" ]; then
+          if [ "$tallinn_hh" = "00" ]; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "✅ Tallinn slot matched: $tallinn_hhmm (UTC $utc_hh:00, offset $tallinn_offset)"
+            echo "✅ Tallinn midnight hour matched: $tallinn_hh (current: $tallinn_hhmm)"
           else
             echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "⏭️ Tallinn slot not matched ($tallinn_hhmm, UTC $utc_hh:00, offset $tallinn_offset), skipping heavy jobs"
+            echo "⏭️ Tallinn midnight hour not matched ($tallinn_hhmm), skipping heavy jobs"
           fi
 
       - name: Checkout repository
-        if: steps.slot_check.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.run_mode != 'broadcast_only')
+        if: steps.slot_check.outputs.should_run == 'true'
         uses: actions/checkout@v5
 
       - name: Setup Node.js
-        if: steps.slot_check.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.run_mode != 'broadcast_only')
+        if: steps.slot_check.outputs.should_run == 'true'
         uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
-        if: steps.slot_check.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.run_mode != 'broadcast_only')
+        if: steps.slot_check.outputs.should_run == 'true'
         run: npm ci
 
       - name: Generate satirical articles
-        if: steps.slot_check.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.run_mode != 'broadcast_only')
+        if: steps.slot_check.outputs.should_run == 'true'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -104,77 +81,13 @@ jobs:
       - name: Report status
         if: always()
         run: |
-          echo "🛠️ Manual mode: ${{ github.event.inputs.run_mode || 'n/a' }}"
-          echo "⏱️ Slot gate: ${{ steps.slot_check.outputs.should_run }}"
+          echo "⏱️ Midnight gate: ${{ steps.slot_check.outputs.should_run }}"
           echo "📅 Generation completed at $(date -u)"
           echo "🔥 The Daily Roast content pipeline finished"
 
-  generate-broadcast:
-    needs: generate-articles
-    if: needs.generate-articles.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install ffmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-
-      - name: Generate broadcast from freshly generated articles
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          ENFORCE_TALLINN_SLOT_TIME: ${{ github.event_name == 'schedule' && '1' || '0' }}
-        run: |
-          tallinn_hh="$(TZ=Europe/Tallinn date +%H)"
-          if [ "$tallinn_hh" -ge 21 ]; then
-            broadcast_slot="evening"
-          elif [ "$tallinn_hh" -ge 15 ]; then
-            broadcast_slot="afternoon"
-          else
-            broadcast_slot="morning"
-          fi
-
-          echo "📻 Generating broadcast after article pipeline..."
-          echo "🕒 Tallinn hour $tallinn_hh -> BROADCAST_SLOT=$broadcast_slot"
-          BROADCAST_SLOT="$broadcast_slot" node scripts/generate-broadcast.mjs
-
-      - name: Upload latest broadcast to YouTube
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          SITE_URL: ${{ secrets.SITE_URL || 'https://the-daily-roast-66e.pages.dev' }}
-          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
-          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
-          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
-          YT_PRIVACY_STATUS: ${{ vars.YT_PRIVACY_STATUS || secrets.YT_PRIVACY_STATUS || 'public' }}
-        run: |
-          echo "🎬 Rendering MP4 and uploading to YouTube..."
-          node scripts/upload-latest-broadcast-youtube.mjs
-
-      - name: Report broadcast status
-        if: always()
-        run: |
-          echo "📅 Broadcast generation completed at $(date -u)"
-          echo "📻 Broadcast pipeline finished"
-
   lock-roast-of-the-day:
     needs: generate-articles
-    if: needs.generate-articles.outputs.should_run == 'true' && (github.event_name != 'workflow_dispatch' || github.event.inputs.run_mode != 'broadcast_only')
+    if: needs.generate-articles.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

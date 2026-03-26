@@ -1,17 +1,85 @@
 name: Scheduled Broadcasts
 
 on:
-  # Manual trigger only.
-  # Scheduled broadcast generation is handled inside daily-content.yml
-  # right after article generation to keep data perfectly synchronized.
+  # Run 3x daily at Tallinn slots: 09:00, 15:00, 21:00.
+  # Cron is UTC, so include both seasonal UTC variants and gate in-job.
+  schedule:
+    - cron: '0 6,12,18 * * *'
+    - cron: '0 7,13,19 * * *'
+
   workflow_dispatch:
+    inputs:
+      broadcast_slot:
+        description: 'Manual slot override (auto uses current Tallinn time)'
+        required: false
+        type: choice
+        default: auto
+        options:
+          - auto
+          - morning
+          - afternoon
+          - evening
 
 concurrency:
   group: broadcast-generator
   cancel-in-progress: false
 
 jobs:
+  slot-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      broadcast_slot: ${{ steps.check.outputs.broadcast_slot }}
+
+    steps:
+      - name: Check Tallinn broadcast slot
+        id: check
+        run: |
+          tallinn_hh="$(TZ=Europe/Tallinn date +%H)"
+          tallinn_hhmm="$(TZ=Europe/Tallinn date +%H:%M)"
+          input_slot="${{ github.event.inputs.broadcast_slot || 'auto' }}"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "$input_slot" = "morning" ] || [ "$input_slot" = "afternoon" ] || [ "$input_slot" = "evening" ]; then
+              slot="$input_slot"
+            elif [ "$tallinn_hh" -lt 12 ]; then
+              slot="morning"
+            elif [ "$tallinn_hh" -lt 18 ]; then
+              slot="afternoon"
+            else
+              slot="evening"
+            fi
+
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "broadcast_slot=$slot" >> "$GITHUB_OUTPUT"
+            echo "🧪 Manual run: slot gate bypassed, slot=$slot (current: $tallinn_hhmm)"
+            exit 0
+          fi
+
+          if [ "$tallinn_hh" = "09" ]; then
+            slot="morning"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "broadcast_slot=$slot" >> "$GITHUB_OUTPUT"
+            echo "✅ Tallinn broadcast slot matched: $slot ($tallinn_hhmm)"
+          elif [ "$tallinn_hh" = "15" ]; then
+            slot="afternoon"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "broadcast_slot=$slot" >> "$GITHUB_OUTPUT"
+            echo "✅ Tallinn broadcast slot matched: $slot ($tallinn_hhmm)"
+          elif [ "$tallinn_hh" = "21" ]; then
+            slot="evening"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "broadcast_slot=$slot" >> "$GITHUB_OUTPUT"
+            echo "✅ Tallinn broadcast slot matched: $slot ($tallinn_hhmm)"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "broadcast_slot=" >> "$GITHUB_OUTPUT"
+            echo "⏭️ Tallinn broadcast slot not matched ($tallinn_hhmm), skipping broadcast"
+          fi
+
   generate-broadcast:
+    needs: slot-check
+    if: needs.slot-check.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -38,8 +106,11 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          BROADCAST_SLOT: ${{ needs.slot-check.outputs.broadcast_slot }}
+          ENFORCE_TALLINN_SLOT_TIME: ${{ github.event_name == 'schedule' && '1' || '0' }}
         run: |
           echo "📻 Generating scheduled broadcast..."
+          echo "🕒 Slot: $BROADCAST_SLOT"
           node scripts/generate-broadcast.mjs
 
       - name: Upload latest broadcast to YouTube

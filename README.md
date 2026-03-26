@@ -195,19 +195,17 @@ Cloudflare will automatically redeploy whenever you push to the `main` branch.
 
 ### Adjusting Generation Schedule
 
-Edit `.github/workflows/daily-content.yml`:
+Article discovery + generation runs once per day from `.github/workflows/daily-content.yml`:
 
 ```yaml
 schedule:
-  - cron: '0 6 * * *'   # 6 AM UTC
-  - cron: '0 18 * * *'  # 6 PM UTC
+  - cron: '0 21 * * *'  # 00:00 Tallinn (DST period)
+  - cron: '0 22 * * *'  # 00:00 Tallinn (standard time period)
 ```
 
-Weekly Top 10 generation runs from `.github/workflows/weekly-top10.yml`.
+Radio broadcast generation + YouTube upload runs 3x daily from `.github/workflows/scheduled-broadcasts.yml`.
 
-Broadcast upload to YouTube runs automatically after broadcast generation in:
-- `.github/workflows/daily-content.yml`
-- `.github/workflows/scheduled-broadcasts.yml`
+Weekly Top 10 generation runs from `.github/workflows/weekly-top10.yml`.
 
 If you want to upload without generating a new broadcast (to avoid duplicate website posts), use:
 - `.github/workflows/youtube-upload-only.yml`
