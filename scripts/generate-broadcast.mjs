@@ -580,6 +580,25 @@ async function fetchArticlesPerCategory(db, usedArticleIds = new Set()) {
 
 const MIN_SCRIPT_LINES = 65;
 
+function normalizeSpeakerName(rawSpeaker) {
+  const normalized = String(rawSpeaker || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[:.]+$/g, '');
+
+  if (normalized === 'jane' || normalized === 'host jane' || normalized === 'co-host jane') {
+    return 'Jane';
+  }
+  if (normalized === 'joe' || normalized === 'host joe' || normalized === 'anchor joe') {
+    return 'Joe';
+  }
+  return null;
+}
+
+function stripSpeakerPrefix(text) {
+  return String(text || '').replace(/^\s*(joe|jane)\s*[:\-]\s*/i, '').trim();
+}
+
 function parseGeneratedScriptJson(rawText) {
   const text = String(rawText || '').trim();
   if (!text) {
@@ -741,16 +760,24 @@ Every line must either add information, escalate a joke, or move the segment for
         throw new Error('Model output missing script array');
       }
 
-      // Normalize speaker names
-      data.script = data.script.map(line => ({
-        speaker: line.speaker === 'Jane' ? 'Jane' : 'Joe',
-        text: String(line.text || '').trim()
-      })).filter(line => line.text.length > 0);
+      // Normalize speaker names robustly to avoid collapsing both voices to one speaker.
+      data.script = data.script.map((line, idx) => {
+        const normalizedSpeaker = normalizeSpeakerName(line?.speaker);
+        return {
+          speaker: normalizedSpeaker || (idx % 2 === 0 ? 'Joe' : 'Jane'),
+          text: stripSpeakerPrefix(line?.text)
+        };
+      }).filter(line => line.text.length > 0);
 
       data.script = injectLiveNotice(data.script, liveNotice);
 
       if (data.script.length < MIN_SCRIPT_LINES) {
         throw new Error(`Script too short after normalization: ${data.script.length} lines (minimum ${MIN_SCRIPT_LINES})`);
+      }
+
+      const speakerSet = new Set(data.script.map(line => line.speaker));
+      if (!speakerSet.has('Joe') || !speakerSet.has('Jane')) {
+        throw new Error('Script normalization lost one speaker voice (Joe/Jane). Retrying generation.');
       }
 
       console.log(`  ✅ Script generated: ${data.script.length} lines`);
