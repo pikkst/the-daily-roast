@@ -136,7 +136,7 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           BROADCAST_SLOT: ${{ needs.slot-check.outputs.broadcast_slot }}
           ENFORCE_TALLINN_SLOT_TIME: ${{ github.event_name == 'schedule' && '1' || '0' }}
-          FORCE_REPLACE_EDITION: ${{ github.event.inputs.replace_existing == 'true' && '1' || '0' }}
+          FORCE_REPLACE_EDITION: ${{ (inputs.replace_existing == true || github.event.inputs.replace_existing == 'true') && '1' || '0' }}
           BGM_VOLUME: ${{ vars.BGM_VOLUME || '0.10' }}
           BGM_TRACKS_JSON: ${{ vars.BGM_TRACKS_JSON || secrets.BGM_TRACKS_JSON || '' }}
           BGM_TRACK_UPBEAT: ${{ vars.BGM_TRACK_UPBEAT || '' }}
@@ -146,6 +146,7 @@ jobs:
         run: |
           echo "📻 Generating scheduled broadcast..."
           echo "🕒 Slot: $BROADCAST_SLOT"
+          echo "♻️ Replace existing mode: $FORCE_REPLACE_EDITION"
           node scripts/generate-broadcast.mjs
 
       - name: Upload latest broadcast to YouTube
