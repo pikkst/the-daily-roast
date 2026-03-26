@@ -56,6 +56,7 @@ const TALLINN_TIMEZONE = 'Europe/Tallinn';
 const POLTSAMAA = { name: 'Poltsamaa, Estonia', latitude: 58.6525, longitude: 25.9717 };
 const BROADCAST_SLOT = (process.env.BROADCAST_SLOT || '').trim().toLowerCase();
 const ENFORCE_TALLINN_SLOT_TIME = process.env.ENFORCE_TALLINN_SLOT_TIME === '1';
+const FORCE_REPLACE_EDITION = process.env.FORCE_REPLACE_EDITION === '1';
 const parsedBgmVolume = Number(process.env.BGM_VOLUME || '0.10');
 const BGM_VOLUME = Number.isFinite(parsedBgmVolume)
   ? Math.min(1, Math.max(0, parsedBgmVolume))
@@ -537,6 +538,17 @@ async function hasEditionAlreadyPublishedToday(db, editionLabel) {
   } catch (err) {
     console.warn(`  ⚠️  Could not verify existing edition for dedupe: ${err.message}`);
     return null;
+  }
+}
+
+async function deleteBroadcastById(db, id) {
+  try {
+    const { error } = await db.from('broadcasts').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.warn(`  ⚠️  Could not delete existing edition ${id}: ${err.message}`);
+    return false;
   }
 }
 
@@ -1049,9 +1061,20 @@ async function main() {
 
   const existingEdition = await hasEditionAlreadyPublishedToday(db, edition.label);
   if (existingEdition) {
-    const alreadyAt = new Date(existingEdition.created_at).toISOString();
-    console.log(`⏭️  ${edition.label} already published for Tallinn today (${alreadyAt}, id: ${existingEdition.id}). Skipping duplicate run.`);
-    process.exit(0);
+    if (FORCE_REPLACE_EDITION) {
+      const alreadyAt = new Date(existingEdition.created_at).toISOString();
+      console.log(`♻️  Replacing existing ${edition.label} from ${alreadyAt} (id: ${existingEdition.id})`);
+      const deleted = await deleteBroadcastById(db, existingEdition.id);
+      if (!deleted) {
+        console.log('⏭️  Replacement requested but existing edition could not be removed. Skipping to avoid duplicates.');
+        process.exit(0);
+      }
+      console.log('✅ Existing edition removed, generating replacement...');
+    } else {
+      const alreadyAt = new Date(existingEdition.created_at).toISOString();
+      console.log(`⏭️  ${edition.label} already published for Tallinn today (${alreadyAt}, id: ${existingEdition.id}). Skipping duplicate run.`);
+      process.exit(0);
+    }
   }
 
   // Step 0: Ensure audio storage bucket exists

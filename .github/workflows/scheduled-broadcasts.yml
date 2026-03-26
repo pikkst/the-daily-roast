@@ -23,6 +23,11 @@ on:
           - morning
           - afternoon
           - evening
+      replace_existing:
+        description: 'Delete existing same-day edition before generating (manual runs only)'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: broadcast-generator
@@ -131,6 +136,7 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           BROADCAST_SLOT: ${{ needs.slot-check.outputs.broadcast_slot }}
           ENFORCE_TALLINN_SLOT_TIME: ${{ github.event_name == 'schedule' && '1' || '0' }}
+          FORCE_REPLACE_EDITION: ${{ github.event.inputs.replace_existing == 'true' && '1' || '0' }}
           BGM_VOLUME: ${{ vars.BGM_VOLUME || '0.10' }}
           BGM_TRACKS_JSON: ${{ vars.BGM_TRACKS_JSON || secrets.BGM_TRACKS_JSON || '' }}
           BGM_TRACK_UPBEAT: ${{ vars.BGM_TRACK_UPBEAT || '' }}
