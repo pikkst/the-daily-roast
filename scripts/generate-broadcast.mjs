@@ -503,6 +503,43 @@ function buildContinuityNotes(recentBroadcasts) {
   }).join('\n');
 }
 
+function getTallinnDateKey(dateInput = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: TALLINN_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date(dateInput));
+}
+
+async function hasEditionAlreadyPublishedToday(db, editionLabel) {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const todayKey = getTallinnDateKey();
+
+  try {
+    const { data, error } = await db
+      .from('broadcasts')
+      .select('id, title, created_at')
+      .eq('published', true)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    if (error) throw error;
+
+    const rows = data || [];
+    const match = rows.find((row) => {
+      const rowTallinnDate = getTallinnDateKey(row.created_at);
+      return rowTallinnDate === todayKey && String(row.title || '').includes(`· ${editionLabel}`);
+    });
+
+    return match || null;
+  } catch (err) {
+    console.warn(`  ⚠️  Could not verify existing edition for dedupe: ${err.message}`);
+    return null;
+  }
+}
+
 async function fetchArticlesPerCategory(db, usedArticleIds = new Set()) {
   console.log('\n📰 Fetching latest article per category...\n');
 
@@ -931,6 +968,14 @@ async function main() {
   }
 
   const db = getSupabaseClient();
+  const edition = getBroadcastEditionContext();
+
+  const existingEdition = await hasEditionAlreadyPublishedToday(db, edition.label);
+  if (existingEdition) {
+    const alreadyAt = new Date(existingEdition.created_at).toISOString();
+    console.log(`⏭️  ${edition.label} already published for Tallinn today (${alreadyAt}, id: ${existingEdition.id}). Skipping duplicate run.`);
+    process.exit(0);
+  }
 
   // Step 0: Ensure audio storage bucket exists
   await ensureAudioBucket(db);
@@ -948,7 +993,6 @@ async function main() {
   // Step 2: Generate comedy script
   console.log(`\n${'─'.repeat(60)}`);
   const liveNotice = await fetchPoltsamaaWeather();
-  const edition = getBroadcastEditionContext();
   console.log(`🌦️  Live notice: ${liveNotice.localDate}, ${liveNotice.localTime} (${TALLINN_TIMEZONE}) — ${liveNotice.summary}`);
   console.log(`🕒 Edition: ${edition.label} (${edition.nominalTime} Tallinn)`);
   const scriptData = await generateScript(articles, liveNotice, continuityNotes, edition);
@@ -1003,10 +1047,14 @@ async function main() {
   console.log(`\n${'─'.repeat(60)}`);
   console.log('💾 Saving broadcast to database...\n');
 
-  const today = new Date().toLocaleDateString('en-US', { 
-    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
+  const today = new Intl.DateTimeFormat('en-US', {
+    timeZone: TALLINN_TIMEZONE,
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
   });
-  const title = `The Daily Roast Radio — ${today} · ${edition.label}`;
+  const title = `The Daily Roast Radio — ${today.format(new Date())} · ${edition.label}`;
 
   const broadcast = await saveBroadcast(db, {
     title,

@@ -3,10 +3,13 @@ name: Scheduled Broadcasts
 on:
   # Run 3x daily at Tallinn slots: 09:00, 15:00, 21:00.
   # Cron is UTC, so include both seasonal UTC variants and gate in-job.
-  # One row is always "off-season" and will be skipped quickly by slot-check.
+  # One row family is always "off-season" and will be skipped quickly by slot-check.
+  # Minute 30 rows are safety-net retries in case GitHub misses the minute-0 trigger.
   schedule:
     - cron: '0 6,12,18 * * *'
     - cron: '0 7,13,19 * * *'
+    - cron: '30 6,12,18 * * *'
+    - cron: '30 7,13,19 * * *'
 
   workflow_dispatch:
     inputs:
@@ -59,17 +62,17 @@ jobs:
             exit 0
           fi
 
-          # Seasonal guard: only one cron row is valid for the current Tallinn offset.
-          # +0200 (winter): use 07/13/19 UTC row
-          # +0300 (summer): use 06/12/18 UTC row
-          if [ "$tallinn_offset" = "+0200" ] && [ "$triggered_cron" = "0 6,12,18 * * *" ]; then
+          # Seasonal guard: only one cron family is valid for current Tallinn offset.
+          # +0200 (winter): use * 7,13,19 UTC family
+          # +0300 (summer): use * 6,12,18 UTC family
+          if [ "$tallinn_offset" = "+0200" ] && [[ "$triggered_cron" == *"6,12,18"* ]]; then
             echo "should_run=false" >> "$GITHUB_OUTPUT"
             echo "broadcast_slot=" >> "$GITHUB_OUTPUT"
             echo "⏭️ Off-season cron trigger ($triggered_cron, offset $tallinn_offset) at $tallinn_hhmm, skipping broadcast"
             exit 0
           fi
 
-          if [ "$tallinn_offset" = "+0300" ] && [ "$triggered_cron" = "0 7,13,19 * * *" ]; then
+          if [ "$tallinn_offset" = "+0300" ] && [[ "$triggered_cron" == *"7,13,19"* ]]; then
             echo "should_run=false" >> "$GITHUB_OUTPUT"
             echo "broadcast_slot=" >> "$GITHUB_OUTPUT"
             echo "⏭️ Off-season cron trigger ($triggered_cron, offset $tallinn_offset) at $tallinn_hhmm, skipping broadcast"
