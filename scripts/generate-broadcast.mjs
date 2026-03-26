@@ -591,6 +591,9 @@ async function fetchArticlesPerCategory(db, usedArticleIds = new Set()) {
 }
 
 const MIN_SCRIPT_LINES = 65;
+const TARGET_SCRIPT_MIN_LINES = 70;
+const TARGET_SCRIPT_MAX_LINES = 100;
+const MIN_SCRIPT_LINES_HARD_FLOOR = 45;
 
 function normalizeSpeakerName(rawSpeaker) {
   const normalized = String(rawSpeaker || '')
@@ -655,6 +658,99 @@ function parseGeneratedScriptJson(rawText) {
   throw lastErr || new Error('Could not parse model JSON output');
 }
 
+async function expandScriptToMinimum(script, edition, retries = 1) {
+  const currentLines = Array.isArray(script) ? script.length : 0;
+  if (currentLines >= MIN_SCRIPT_LINES) {
+    return script;
+  }
+
+  const serialized = (script || [])
+    .map(line => `${line.speaker}: ${line.text}`)
+    .join('\n');
+
+  const prompt = `You are revising a two-host comedy radio script.
+
+Current script has ${currentLines} lines, but it must be at least ${MIN_SCRIPT_LINES} lines.
+Expand it to 70-95 lines while preserving story order, clarity, and humor.
+
+Rules:
+- Keep only two speakers: Joe and Jane.
+- Keep existing lines, but enrich with extra back-and-forth, stronger transitions, and sharper callbacks.
+- Add substance before punchlines (what happened + why it matters) in each story segment.
+- Do not add stage directions or narrator text.
+- Return ONLY valid JSON in this exact format:
+{
+  "script": [
+    {"speaker": "Joe", "text": "..."},
+    {"speaker": "Jane", "text": "..."}
+  ],
+  "line_count": 78
+}
+
+SCRIPT TO EXPAND:
+${serialized}`;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.85,
+            topP: 0.95,
+            maxOutputTokens: 16384,
+            responseMimeType: 'application/json'
+          }
+        }),
+        signal: AbortSignal.timeout(120000)
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Expansion API error ${response.status}: ${errText.slice(0, 200)}`);
+      }
+
+      const result = await response.json();
+      const parts = result?.candidates?.[0]?.content?.parts || [];
+      const textPart = parts.filter(p => p.text !== undefined && !p.thought).pop();
+      const text = textPart?.text;
+      if (!text) throw new Error('Expansion response was empty');
+
+      const data = parseGeneratedScriptJson(text);
+      if (!Array.isArray(data?.script)) {
+        throw new Error('Expansion output missing script array');
+      }
+
+      const expanded = data.script.map((line, idx) => {
+        const normalizedSpeaker = normalizeSpeakerName(line?.speaker);
+        return {
+          speaker: normalizedSpeaker || (idx % 2 === 0 ? 'Joe' : 'Jane'),
+          text: stripSpeakerPrefix(line?.text)
+        };
+      }).filter(line => line.text.length > 0);
+
+      if (expanded.length >= MIN_SCRIPT_LINES) {
+        console.log(`  🔧 Expansion pass succeeded: ${expanded.length} lines`);
+        return expanded;
+      }
+
+      if (attempt < retries) {
+        console.warn(`  ⚠️  Expansion attempt ${attempt + 1} still short (${expanded.length} lines), retrying...`);
+        await sleep(5000);
+      }
+    } catch (err) {
+      if (attempt < retries) {
+        console.warn(`  ⚠️  Expansion attempt ${attempt + 1} failed: ${err.message.slice(0, 120)}`);
+        await sleep(5000);
+      }
+    }
+  }
+
+  return script;
+}
+
 // ---------- Step 2: Generate Comedy Script ----------
 
 async function generateScript(articles, liveNotice, continuityNotes, edition, retries = 2) {
@@ -691,6 +787,14 @@ WRITE A COMPLETE RADIO SHOW SCRIPT covering ALL ${articles.length} stories. The 
   - 6-10 lines of dialogue per story with genuine comedy
    - Include at least one fictional "expert quote" or "listener call-in" per story
 4. **WRAP-UP** — Final banter, use the edition-specific signoff instruction above
+
+LENGTH BUDGET (MANDATORY):
+- Cold open: 4-6 lines
+- Intro: 8-10 lines
+- Each story segment: 8-10 lines
+- Wrap-up: 6-8 lines
+- Total: ${TARGET_SCRIPT_MIN_LINES}-${TARGET_SCRIPT_MAX_LINES} lines
+- If first draft is shorter than ${TARGET_SCRIPT_MIN_LINES}, continue adding lines until it reaches at least ${TARGET_SCRIPT_MIN_LINES}.
 
 CONTENT QUALITY RULES (VERY IMPORTANT):
 - Be specific to each provided story; avoid generic commentary that could fit any headline.
@@ -729,10 +833,11 @@ Return ONLY valid JSON:
     {"speaker": "Joe", "text": "..."},
     {"speaker": "Jane", "text": "..."}
   ],
-  "bgmTheme": "upbeat"
+  "bgmTheme": "upbeat",
+  "line_count": 78
 }
 
-The script should have 70-100 lines total (~15 minutes of audio).
+The script should have ${TARGET_SCRIPT_MIN_LINES}-${TARGET_SCRIPT_MAX_LINES} lines total (~15 minutes of audio).
 Target ratio: ~65% meaningful story substance, ~35% humor and punchlines.
 Every line must either add information, escalate a joke, or move the segment forward. No filler, no dead air.`;
 
@@ -744,7 +849,7 @@ Every line must either add information, escalate a joke, or move the segment for
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
-            temperature: 0.95,
+            temperature: 0.85,
             topP: 0.95,
             maxOutputTokens: 16384,
             responseMimeType: 'application/json',
@@ -783,8 +888,22 @@ Every line must either add information, escalate a joke, or move the segment for
 
       data.script = injectLiveNotice(data.script, liveNotice);
 
+      const declaredLineCount = Number(data.line_count);
+      if (Number.isFinite(declaredLineCount) && Math.abs(declaredLineCount - data.script.length) > 5) {
+        console.warn(`  ⚠️  Declared line_count (${declaredLineCount}) differs from normalized lines (${data.script.length}).`);
+      }
+
       if (data.script.length < MIN_SCRIPT_LINES) {
-        throw new Error(`Script too short after normalization: ${data.script.length} lines (minimum ${MIN_SCRIPT_LINES})`);
+        console.warn(`  ⚠️  Script below target (${data.script.length}/${MIN_SCRIPT_LINES}). Running expansion pass...`);
+        data.script = await expandScriptToMinimum(data.script, edition);
+      }
+
+      if (data.script.length < MIN_SCRIPT_LINES_HARD_FLOOR) {
+        throw new Error(`Script too short after expansion: ${data.script.length} lines (hard floor ${MIN_SCRIPT_LINES_HARD_FLOOR})`);
+      }
+
+      if (data.script.length < MIN_SCRIPT_LINES) {
+        console.warn(`  ⚠️  Script below target after expansion (${data.script.length}/${MIN_SCRIPT_LINES}), continuing with fallback length.`);
       }
 
       const speakerSet = new Set(data.script.map(line => line.speaker));
