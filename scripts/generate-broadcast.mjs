@@ -578,6 +578,52 @@ async function fetchArticlesPerCategory(db, usedArticleIds = new Set()) {
   return articles;
 }
 
+const MIN_SCRIPT_LINES = 65;
+
+function parseGeneratedScriptJson(rawText) {
+  const text = String(rawText || '').trim();
+  if (!text) {
+    throw new Error('Empty model output');
+  }
+
+  const candidates = [];
+  candidates.push(text);
+
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    candidates.push(text.slice(firstBrace, lastBrace + 1));
+  }
+
+  const unfenced = text
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim();
+  if (unfenced && unfenced !== text) {
+    candidates.push(unfenced);
+  }
+
+  const sanitized = unfenced
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/,\s*([}\]])/g, '$1');
+  if (sanitized && !candidates.includes(sanitized)) {
+    candidates.push(sanitized);
+  }
+
+  let lastErr = null;
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+
+  throw lastErr || new Error('Could not parse model JSON output');
+}
+
 // ---------- Step 2: Generate Comedy Script ----------
 
 async function generateScript(articles, liveNotice, continuityNotes, edition, retries = 2) {
@@ -689,10 +735,10 @@ Every line must either add information, escalate a joke, or move the segment for
 
       if (!text) throw new Error('Empty response from Gemini');
 
-      const data = JSON.parse(text);
+      const data = parseGeneratedScriptJson(text);
 
-      if (!data.script || !Array.isArray(data.script) || data.script.length < 10) {
-        throw new Error(`Script too short: ${data.script?.length || 0} lines`);
+      if (!data.script || !Array.isArray(data.script)) {
+        throw new Error('Model output missing script array');
       }
 
       // Normalize speaker names
@@ -702,6 +748,10 @@ Every line must either add information, escalate a joke, or move the segment for
       })).filter(line => line.text.length > 0);
 
       data.script = injectLiveNotice(data.script, liveNotice);
+
+      if (data.script.length < MIN_SCRIPT_LINES) {
+        throw new Error(`Script too short after normalization: ${data.script.length} lines (minimum ${MIN_SCRIPT_LINES})`);
+      }
 
       console.log(`  ✅ Script generated: ${data.script.length} lines`);
       console.log(`  🎵 BGM theme: ${data.bgmTheme || 'upbeat'}`);
