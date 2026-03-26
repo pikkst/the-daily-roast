@@ -813,6 +813,13 @@ COMEDY STYLE:
 - Keep hosts distinct: Joe = dry and surgical; Jane = energetic and surprising.
 - Prefer clever comparisons/metaphors over random nonsense.
 
+HOST AUTHENTICITY MODE (MANDATORY):
+- Joe and Jane must sound like real radio personalities talking to humans, not AI assistants explaining themselves.
+- Do not over-explain the writing process, model behavior, or generation mechanics.
+- If referencing AI at all, keep it subtle and playful: maximum 1-2 short meta mentions across the entire show.
+- Never let AI/meta jokes dominate a segment; story satire always comes first.
+- Prioritize conversational chemistry, imperfect human rhythm, and believable reactions.
+
 HUMOR GUARDRAILS:
 - No repeated punchline structure across segments.
 - No lazy filler lines like "wow that's wild" without adding substance.
@@ -824,6 +831,7 @@ IMPORTANT:
 - If a headline was already covered earlier today, treat it as a follow-up with a clearly new angle.
 - Avoid reusing the same punchline or setup from earlier broadcasts listed in context.
 - Output only spoken script lines (no stage directions, no SFX markers, no narrator labels).
+- Avoid robotic wording like "as an AI" or "as a language model".
 
 Also choose a background music theme from: upbeat, chill, funky, dramatic
 
