@@ -231,6 +231,9 @@ Cloudflare will automatically redeploy whenever you push to the `main` branch.
 | `SUNDAY_PROMO_BUMPER_TRACK` | Sunday marathon default bumper file/URL (defaults to `sounds/dragon-studio-whoosh-cinematic-376875.mp3`) | No |
 | `PROMO_MODE` | Mid-roll mode: `platform` or `partner_challenge` | No |
 | `PROMO_PARTNER_CHALLENGE` | Partner challenge CTA text used when `PROMO_MODE=partner_challenge` | No |
+| `REPLY_AUTHOR_NAME` | Display name posted by auto-responder (default: `The Daily Roast 🎙️`) | No |
+| `REPLY_LOOKBACK_HOURS` | How far back to scan comments for AI skepticism threads (default: `48`) | No |
+| `REPLY_MAX_PER_RUN` | Max AI replies posted per auto-responder run (default: `10`) | No |
 
 ### Adjusting Generation Schedule
 
@@ -277,6 +280,10 @@ Example `BGM_TRACKS_JSON`:
 ```
 
 Weekly Top 10 generation runs from `.github/workflows/weekly-top10.yml`.
+
+AI comment auto-responder runs every 6 hours from `.github/workflows/auto-reply-comments.yml`.
+When a listener comments "this is all AI-generated" (or similar, in Estonian or English), the platform replies in-character: self-aware, proud, and a little smug — because that's exactly the concept.
+Tune trigger sensitivity via `REPLY_LOOKBACK_HOURS` and `REPLY_MAX_PER_RUN`. Use `DRY_RUN=1` locally to preview replies without posting them.
 
 If you want to upload without generating a new broadcast (to avoid duplicate website posts), use:
 - `.github/workflows/youtube-upload-only.yml`
