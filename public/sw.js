@@ -3,7 +3,7 @@
 // Cache-first for assets, network-first for API/HTML
 // ============================================
 
-const CACHE_NAME = 'daily-roast-v1';
+const CACHE_NAME = 'daily-roast-v2';
 const STATIC_ASSETS = [
   '/',
   '/article',
@@ -56,9 +56,31 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
 
+  const isVersionedStatic =
+    url.pathname.startsWith('/js/') ||
+    url.pathname.startsWith('/css/') ||
+    url.pathname.startsWith('/icons/') ||
+    url.pathname.endsWith('.html') ||
+    url.pathname.endsWith('.json');
+
   // API calls & HTML pages: network-first
   if (url.pathname.startsWith('/rest/') || url.pathname === '/sitemap.xml' ||
       event.request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(res => {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          return res;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Scripts/styles/manifests/icons: network-first with cache fallback
+  // to reduce stale UI issues where users only see updates after hard refresh.
+  if (isVersionedStatic) {
     event.respondWith(
       fetch(event.request)
         .then(res => {

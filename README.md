@@ -226,6 +226,9 @@ For YouTube Podcasts, create or mark the playlist as a Podcast in YouTube Studio
 
 Generated radio audio supports optional background music mixing with default volume at 10%.
 Use free or licensed tracks from sources like Pixabay Music, Uppbeat, Artlist, or Epidemic and provide links via `BGM_TRACKS_JSON` (or `BGM_TRACK_*` fallback vars).
+If no BGM env catalog is configured, the generator now falls back to built-in royalty-free default tracks so web + YouTube outputs stay consistent.
+
+The radio web player now defaults to server-mixed audio only (client-side overlay BGM disabled by default) to avoid device-specific autoplay differences, especially on mobile browsers.
 
 You can tune script personality and ad copy via prompt context env vars:
 - `PLATFORM_PROMO_BRIEF` controls the mid-show platform/sponsor break style and message.

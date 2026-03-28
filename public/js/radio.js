@@ -11,6 +11,7 @@
     funky:    'https://cdn.pixabay.com/audio/2022/02/22/audio_d1e871676d.mp3',
     dramatic: 'https://cdn.pixabay.com/audio/2022/08/04/audio_2dde6a6983.mp3'
   };
+  const USE_CLIENT_BGM_OVERLAY = false;
 
   const CATEGORY_ICONS = {
     politics: '🏛️', technology: '💻', business: '💼', science: '🔬',
@@ -56,6 +57,7 @@
     els.volume      = document.getElementById('radio-volume');
     els.volBtn      = document.getElementById('radio-vol-btn');
     els.bgmVolume   = document.getElementById('radio-bgm-volume');
+    els.bgmWrap     = document.querySelector('.radio-bgm-wrap');
     els.canvas      = document.getElementById('radio-canvas');
     els.intro       = document.getElementById('radio-intro');
     els.articlesSection = document.getElementById('radio-articles-section');
@@ -202,12 +204,16 @@
       els.audio.load();
       els.playerSection.style.display = 'block';
 
-      // BGM
-      const bgmTheme = broadcast.bgm_theme || 'upbeat';
-      const bgmUrl = BGM_TRACKS[bgmTheme] || BGM_TRACKS.upbeat;
-      els.bgm.src = bgmUrl;
-      els.bgm.volume = 0.25;
-      els.bgm.load();
+      // Optional client-side BGM overlay (disabled by default).
+      if (USE_CLIENT_BGM_OVERLAY) {
+        const bgmTheme = broadcast.bgm_theme || 'upbeat';
+        const bgmUrl = BGM_TRACKS[bgmTheme] || BGM_TRACKS.upbeat;
+        els.bgm.src = bgmUrl;
+        els.bgm.volume = 0.25;
+        els.bgm.load();
+      } else if (els.bgmWrap) {
+        els.bgmWrap.style.display = 'none';
+      }
 
       if (!playerInitialized) {
         setupPlayer();
@@ -263,9 +269,11 @@
     });
 
     // BGM Volume
-    els.bgmVolume.addEventListener('input', (e) => {
-      els.bgm.volume = parseInt(e.target.value) / 100;
-    });
+    if (USE_CLIENT_BGM_OVERLAY && els.bgmVolume) {
+      els.bgmVolume.addEventListener('input', (e) => {
+        els.bgm.volume = parseInt(e.target.value) / 100;
+      });
+    }
 
     // Mute toggle
     els.volBtn.addEventListener('click', () => {
@@ -309,7 +317,7 @@
         }
       }
 
-      if (!bgmSourceNode && els.bgm.src) {
+      if (USE_CLIENT_BGM_OVERLAY && !bgmSourceNode && els.bgm.src) {
         try {
           bgmSourceNode = audioCtx.createMediaElementSource(els.bgm);
           bgmSourceNode.connect(audioCtx.destination);
@@ -319,7 +327,9 @@
       }
 
       await els.audio.play();
-      els.bgm.play().catch(() => {});
+      if (USE_CLIENT_BGM_OVERLAY && els.bgm.src) {
+        els.bgm.play().catch(() => {});
+      }
       els.speakerName.textContent = 'On air: Joe & Jane';
 
       isPlaying = true;
@@ -337,7 +347,9 @@
 
   function stopPlayback() {
     els.audio.pause();
-    els.bgm.pause();
+    if (USE_CLIENT_BGM_OVERLAY) {
+      els.bgm.pause();
+    }
     els.speakerName.textContent = 'Ready to play';
     isPlaying = false;
     els.playIcon.style.display = 'block';

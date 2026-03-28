@@ -62,6 +62,12 @@ const BGM_VOLUME = Number.isFinite(parsedBgmVolume)
   ? Math.min(1, Math.max(0, parsedBgmVolume))
   : 0.10;
 const BGM_THEMES = ['upbeat', 'chill', 'funky', 'dramatic'];
+const DEFAULT_BGM_TRACKS = {
+  upbeat: ['https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3'],
+  chill: ['https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a7315b.mp3'],
+  funky: ['https://cdn.pixabay.com/audio/2022/02/22/audio_d1e871676d.mp3'],
+  dramatic: ['https://cdn.pixabay.com/audio/2022/08/04/audio_2dde6a6983.mp3']
+};
 
 function normalizeMultilineEnv(value, fallback) {
   const normalized = String(value || '')
@@ -123,6 +129,12 @@ function buildBgmCatalog() {
     }
   } catch (err) {
     console.warn(`  ⚠️  Invalid BGM_TRACKS_JSON: ${err.message}`);
+  }
+
+  for (const theme of BGM_THEMES) {
+    if (!Array.isArray(catalog[theme]) || catalog[theme].length === 0) {
+      catalog[theme] = [...(DEFAULT_BGM_TRACKS[theme] || [])];
+    }
   }
 
   return catalog;
