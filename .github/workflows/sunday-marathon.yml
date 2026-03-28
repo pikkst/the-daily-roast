@@ -64,6 +64,9 @@ jobs:
           # Memory linking
           MEMORY_LOOKBACK_DAYS: ${{ secrets.MEMORY_LOOKBACK_DAYS || vars.MEMORY_LOOKBACK_DAYS || '14' }}
           MEMORY_MAX_LINKS: ${{ secrets.MEMORY_MAX_LINKS || vars.MEMORY_MAX_LINKS || '8' }}
+          ENABLE_LISTENER_PUNCHLINES: ${{ vars.ENABLE_LISTENER_PUNCHLINES || '1' }}
+          LISTENER_PUNCHLINE_LOOKBACK_HOURS: ${{ vars.LISTENER_PUNCHLINE_LOOKBACK_HOURS || '72' }}
+          LISTENER_PUNCHLINE_MAX_ITEMS: ${{ vars.LISTENER_PUNCHLINE_MAX_ITEMS || '5' }}
           RUN_WEEKLY_TOP10_BEFORE_MARATHON: ${{ vars.RUN_WEEKLY_TOP10_BEFORE_MARATHON || '1' }}
 
           # BGM
@@ -87,6 +90,12 @@ jobs:
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
           YT_PRIVACY_STATUS: ${{ vars.YT_PRIVACY_STATUS || secrets.YT_PRIVACY_STATUS || 'public' }}
           YT_PODCAST_PLAYLIST_ID: ${{ vars.YT_PODCAST_PLAYLIST_ID || secrets.YT_PODCAST_PLAYLIST_ID || '' }}
+
+          # Micro clips
+          SUNDAY_GENERATE_CLIPS: ${{ vars.SUNDAY_GENERATE_CLIPS || '1' }}
+          SUNDAY_CLIP_COUNT: ${{ vars.SUNDAY_CLIP_COUNT || '3' }}
+          SUNDAY_CLIP_SECONDS: ${{ vars.SUNDAY_CLIP_SECONDS || '30' }}
+          SUNDAY_CLIP_BUCKET: ${{ vars.SUNDAY_CLIP_BUCKET || 'broadcast-clips' }}
         run: |
           echo "🎯 Running Sunday marathon orchestration..."
           node scripts/run-sunday-marathon.mjs

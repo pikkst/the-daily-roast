@@ -208,11 +208,18 @@ Cloudflare will automatically redeploy whenever you push to the `main` branch.
 | `TARGET_TANGENTS_PER_EPISODE` | Approx number of short tangents per episode (default: `3`, range: `1-6`) | No |
 | `MEMORY_LOOKBACK_DAYS` | How far back to search previous broadcasts for topical continuity links (default: `14`) | No |
 | `MEMORY_MAX_LINKS` | Maximum continuity links injected into prompt (default: `8`) | No |
+| `ENABLE_LISTENER_PUNCHLINES` | Enables approved-listener punchline callbacks in script prompt (`1`/`0`, default: `1`) | No |
+| `LISTENER_PUNCHLINE_LOOKBACK_HOURS` | Recency window for approved comments considered as punchline picks (default: `72`) | No |
+| `LISTENER_PUNCHLINE_MAX_ITEMS` | Max listener comments injected as punchline candidates (default: `5`) | No |
 | `BROADCAST_FORMAT` | Broadcast mode (`daily` or `sunday_special`) | No |
 | `SUNDAY_DEEP_DIVE` | Enables deep-dive compare mode (`1`) for Sunday special episodes | No |
 | `SCRIPT_MIN_LINES` | Lower script length target override for custom formats | No |
 | `SCRIPT_MAX_LINES` | Upper script length target override for custom formats | No |
 | `SUNDAY_UPLOAD_YOUTUBE` | For marathon orchestrator: upload each generated episode (`1`/`0`) | No |
+| `SUNDAY_GENERATE_CLIPS` | For marathon orchestrator: generate micro clips after each episode (`1`/`0`) | No |
+| `SUNDAY_CLIP_COUNT` | Number of clips per Sunday episode (default: `3`) | No |
+| `SUNDAY_CLIP_SECONDS` | Clip duration for Sunday episodes (default: `30`) | No |
+| `SUNDAY_CLIP_BUCKET` | Supabase Storage bucket for Sunday clips (default: `broadcast-clips`) | No |
 | `ENABLE_EXTERNAL_RESEARCH` | Explicitly force external research on/off (`1`/`0`); default auto-enables only for Sunday deep-dive | No |
 | `RUN_WEEKLY_TOP10_BEFORE_MARATHON` | Refresh weekly rankings before Sunday marathon starts (default: `1`) | No |
 | `PROMO_PAUSE_SECONDS` | Silence inserted around promo segment when merging audio parts (default: `0.7`) | No |
@@ -255,6 +262,7 @@ You can tune script personality and ad copy via prompt context env vars:
 - `HOST_BIO_JOE`, `HOST_BIO_JANE`, and `HOST_SHARED_HISTORY` control host backstory and chemistry.
 - `HOST_MEMORY_BANK`, `TANGENT_STYLE_GUIDE`, and `TARGET_TANGENTS_PER_EPISODE` control natural short detours into memories/history while keeping the script on-topic.
 - `MEMORY_LOOKBACK_DAYS` and `MEMORY_MAX_LINKS` enable week-level topical memory so scripts can connect similar stories from previous days/weeks.
+- `ENABLE_LISTENER_PUNCHLINES`, `LISTENER_PUNCHLINE_LOOKBACK_HOURS`, and `LISTENER_PUNCHLINE_MAX_ITEMS` let the script optionally reuse approved/high-liked listener comments as one short callback moment.
 - For multiline values in GitHub Secrets, use `\n` for line breaks.
 
 Example `BGM_TRACKS_JSON`:

@@ -122,6 +122,15 @@ const parsedExternalResearchItems = Number(process.env.EXTERNAL_RESEARCH_MAX_ITE
 const EXTERNAL_RESEARCH_MAX_ITEMS = Number.isFinite(parsedExternalResearchItems)
   ? Math.max(1, Math.min(6, Math.floor(parsedExternalResearchItems)))
   : 3;
+const ENABLE_LISTENER_PUNCHLINES = process.env.ENABLE_LISTENER_PUNCHLINES !== '0';
+const parsedPunchlineLookbackHours = Number(process.env.LISTENER_PUNCHLINE_LOOKBACK_HOURS || '72');
+const LISTENER_PUNCHLINE_LOOKBACK_HOURS = Number.isFinite(parsedPunchlineLookbackHours)
+  ? Math.max(12, Math.min(336, Math.floor(parsedPunchlineLookbackHours)))
+  : 72;
+const parsedPunchlineMaxItems = Number(process.env.LISTENER_PUNCHLINE_MAX_ITEMS || '5');
+const LISTENER_PUNCHLINE_MAX_ITEMS = Number.isFinite(parsedPunchlineMaxItems)
+  ? Math.max(1, Math.min(12, Math.floor(parsedPunchlineMaxItems)))
+  : 5;
 const parsedScriptMinLines = Number(process.env.SCRIPT_MIN_LINES || '70');
 const SCRIPT_TARGET_MIN_LINES = Number.isFinite(parsedScriptMinLines)
   ? Math.max(35, Math.min(160, Math.floor(parsedScriptMinLines)))
@@ -818,6 +827,58 @@ async function fetchExternalResearchNotes(articles, maxItems = 3) {
   return notes.join('\n');
 }
 
+async function fetchListenerPunchlineNotes(db, lookbackHours = LISTENER_PUNCHLINE_LOOKBACK_HOURS, maxItems = LISTENER_PUNCHLINE_MAX_ITEMS) {
+  const since = new Date(Date.now() - lookbackHours * 60 * 60 * 1000).toISOString();
+
+  try {
+    const { data: commentRows, error: commentErr } = await db
+      .from('article_comments')
+      .select('article_id, author_name, content, likes, created_at, is_approved')
+      .eq('is_approved', true)
+      .gte('created_at', since)
+      .order('likes', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(120);
+
+    if (commentErr) throw commentErr;
+
+    const comments = (commentRows || [])
+      .filter((row) => String(row?.content || '').trim().length >= 12)
+      .slice(0, 60);
+
+    if (comments.length === 0) {
+      return 'No standout listener punchlines in the recent window.';
+    }
+
+    const articleIds = Array.from(new Set(comments.map((c) => c.article_id).filter(Boolean)));
+    let articleTitleMap = new Map();
+
+    if (articleIds.length > 0) {
+      const { data: articleRows, error: articleErr } = await db
+        .from('articles')
+        .select('id, title')
+        .in('id', articleIds);
+
+      if (!articleErr) {
+        articleTitleMap = new Map((articleRows || []).map((a) => [a.id, a.title]));
+      }
+    }
+
+    const picked = comments.slice(0, maxItems).map((row, idx) => {
+      const author = String(row.author_name || 'Anonymous Roaster').trim().slice(0, 40);
+      const text = String(row.content || '').replace(/\s+/g, ' ').trim().slice(0, 180);
+      const likes = Number(row.likes || 0);
+      const headline = articleTitleMap.get(row.article_id) || 'unknown headline';
+      return `${idx + 1}. ${author} (${likes} likes) on "${headline}": "${text}"`;
+    });
+
+    return picked.join('\n');
+  } catch (err) {
+    console.warn(`  ⚠️  Could not load listener punchlines: ${err.message}`);
+    return 'Listener punchline context unavailable.';
+  }
+}
+
 function getTallinnDateKey(dateInput = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: TALLINN_TIMEZONE,
@@ -1069,6 +1130,7 @@ async function generateScript(
   topicalMemoryNotes,
   weeklyTopContext,
   externalResearchNotes,
+  listenerPunchlineNotes,
   edition,
   retries = 2
 ) {
@@ -1120,6 +1182,9 @@ ${weeklyTopContext}
 
 EXTERNAL RESEARCH NOTES (best effort web context):
 ${externalResearchNotes}
+
+LISTENER PUNCHLINE PICKS (community signal):
+${listenerPunchlineNotes}
 
 FORMAT MODE:
 ${formatBlock}
@@ -1174,6 +1239,7 @@ CONTENT QUALITY RULES (VERY IMPORTANT):
 - Vary pacing: quick jab -> analysis beat -> callback -> stronger punchline.
 - If a topical memory link is provided for a story, include one explicit continuity callback (what changed since earlier coverage).
 - If weekly context is provided, include at least one callback to a weekly top story.
+- If LISTENER PUNCHLINE PICKS contains numbered entries (for example line starts with "1."), include one short listener shout-out/callback naturally in the episode.
 - Treat each episode as part of an ongoing weekly narrative arc, not a disconnected standalone.
 
 COMEDY STYLE:
@@ -1865,6 +1931,9 @@ async function main() {
   const externalResearchNotes = ENABLE_EXTERNAL_RESEARCH
     ? await fetchExternalResearchNotes(articles, EXTERNAL_RESEARCH_MAX_ITEMS)
     : 'External research disabled for this run (API optimization mode).';
+  const listenerPunchlineNotes = ENABLE_LISTENER_PUNCHLINES
+    ? await fetchListenerPunchlineNotes(db)
+    : 'Listener punchline context disabled for this run.';
 
   if (articles.length < 3) {
     console.error(`❌ Not enough articles (${articles.length}). Need at least 3 categories. Exiting.`);
@@ -1883,6 +1952,7 @@ async function main() {
     topicalMemoryNotes,
     weeklyTopContext,
     externalResearchNotes,
+    listenerPunchlineNotes,
     edition
   );
 
