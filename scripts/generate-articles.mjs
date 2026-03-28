@@ -471,6 +471,20 @@ function extractFieldsManually(text) {
     }
   }
 
+  // TL;DR array (short bullet strings)
+  const tldrMatch = text.match(/"tldr"\s*:\s*\[(.*?)\]/s);
+  if (tldrMatch) {
+    try {
+      result.tldr = JSON.parse(`[${tldrMatch[1]}]`);
+    } catch (_) {
+      result.tldr = tldrMatch[1].match(/"([^"]+)"/g)?.map(t => t.replace(/"/g, '')) || [];
+    }
+  }
+
+  // What Changed — short plain-text string
+  const wcMatch = text.match(/"what_changed"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+  if (wcMatch) result.what_changed = wcMatch[1].replace(/\\"/g, '"').replace(/\\n/g, ' ').trim();
+
   // Content field — the problematic long HTML string
   // Find "content": " then grab everything until the next known key or end
   const contentMatch = text.match(/"content"\s*:\s*"/);
@@ -529,12 +543,32 @@ function extractFieldsManually(text) {
   return result;
 }
 
+// ---------- Fetch recent category titles for context ----------
+
+async function fetchRecentCategoryTitles(db, categorySlug, limit = 3) {
+  if (!db || !categorySlug) return [];
+  try {
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data } = await db
+      .from('articles_with_category')
+      .select('title')
+      .eq('category_slug', categorySlug)
+      .eq('published', true)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    return (data || []).map(r => r.title).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 // ---------- Gemini AI Article Generation ----------
 
-async function generateSatiricalArticle(headline, retries = 3) {
+async function generateSatiricalArticle(headline, recentTitles = [], retries = 3) {
   console.log(`    🤖 Step 1: Generating article text...`);
 
-  const prompt = buildPrompt(headline);
+  const prompt = buildPrompt(headline, recentTitles);
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -584,6 +618,20 @@ async function generateSatiricalArticle(headline, retries = 3) {
       // Estimate word count
       const wordCount = article.content.replace(/<[^>]*>/g, '').split(/\s+/).length;
       console.log(`    ✅ Article text ready: "${article.title}" (~${wordCount} words)`);
+
+      // Inject TL;DR block at the top of content
+      if (Array.isArray(article.tldr) && article.tldr.length > 0) {
+        const bullets = article.tldr.map(b => `<li>${String(b).trim()}</li>`).join('');
+        const tldrHtml = `<div class="tldr-block"><span class="tldr-label">⚡ TL;DR</span><ul class="tldr-list">${bullets}</ul></div>`;
+        article.content = tldrHtml + article.content;
+      }
+
+      // Inject "What Changed" block after the first closing </p> (after lede)
+      if (article.what_changed && article.what_changed.trim().length > 10) {
+        const wcHtml = `<div class="what-changed-block"><span class="what-changed-label">📌 What changed</span><p>${String(article.what_changed).trim()}</p></div>`;
+        article.content = article.content.replace('</p>', '</p>' + wcHtml);
+      }
+
       return {
         ...article,
         source_headline: headline.title
@@ -603,12 +651,16 @@ async function generateSatiricalArticle(headline, retries = 3) {
   return null;
 }
 
-function buildPrompt(headline) {
+function buildPrompt(headline, recentTitles = []) {
+  const recentCoverageNote = recentTitles.length > 0
+    ? `\nRECENT COVERAGE IN THIS CATEGORY (last 7 days — use for "what_changed" context):\n${recentTitles.map((t, i) => `${i + 1}. "${t}"`).join('\n')}\n`
+    : '';
+
   return `You are a Pulitzer-worthy satirical journalist for "The Daily Roast" — the internet's sharpest humor news publication, in the tradition of The Onion, The Babylon Bee, Waterford Whispers, and The Daily Mash. Your articles are so well-crafted that readers share them with "IS THIS REAL?!" — and then burst out laughing.
 
 REAL NEWS HEADLINE TO SATIRIZE:
 "${headline.title}"
-${headline.description ? `Context: ${headline.description}` : ''}
+${headline.description ? `Context: ${headline.description}` : ''}${recentCoverageNote}
 
 YOUR TASK: Write a FULL-LENGTH, publication-ready satirical news article. Not a summary — a complete, detailed, immersive piece that rewards every second of reading.
 
@@ -658,7 +710,9 @@ OUTPUT FORMAT — Return ONLY valid JSON:
   "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
   "meta_description": "SEO meta description under 155 characters",
   "author": "A funny fictional byline — combine a real-sounding name with an absurd title (e.g., 'Diana Presswell, Senior Overreaction Correspondent')",
-  "reading_time": 5
+  "reading_time": 5,
+  "tldr": ["First bullet — the core absurd fact in one sentence", "Second bullet — why it matters or the funniest angle", "Third bullet — the kicker or what happens next"],
+  "what_changed": "One sentence on how this story differs from or builds on recent coverage in the category. Leave empty string if no context."
 }
 
 IMPORTANT: Return ONLY the JSON object. No markdown, no code blocks, no explanations. The "content" field must be a single JSON string with properly escaped HTML.`;
@@ -1025,7 +1079,8 @@ async function main() {
     console.log(`${'─'.repeat(60)}`);
 
     // ── Step 1: Generate article text ──
-    const article = await generateSatiricalArticle(headline);
+    const recentTitles = await fetchRecentCategoryTitles(db, headline.guessedCategory);
+    const article = await generateSatiricalArticle(headline, recentTitles);
     
     if (!article) {
       console.log(`    ❌ Skipping — text generation failed.`);

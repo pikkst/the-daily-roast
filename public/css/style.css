@@ -1170,6 +1170,69 @@ button {
   pointer-events: none;
 }
 
+/* TL;DR Block */
+.tldr-block {
+  background: rgba(255, 107, 53, 0.07);
+  border-left: 3px solid var(--color-primary, #ff6b35);
+  border-radius: 0 8px 8px 0;
+  padding: 14px 20px;
+  margin: 0 0 28px 0;
+}
+.tldr-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-primary, #ff6b35);
+  margin-bottom: 8px;
+}
+.tldr-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.tldr-list li {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  padding-left: 18px;
+  position: relative;
+  color: var(--text-secondary, #bbb);
+}
+.tldr-list li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--color-primary, #ff6b35);
+}
+
+/* What Changed Block */
+.what-changed-block {
+  background: rgba(100, 160, 255, 0.06);
+  border-left: 3px solid #64a0ff;
+  border-radius: 0 8px 8px 0;
+  padding: 10px 18px;
+  margin: 16px 0 24px 0;
+}
+.what-changed-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64a0ff;
+  margin-bottom: 6px;
+}
+.what-changed-block p {
+  font-size: 0.86rem;
+  line-height: 1.55;
+  margin: 0;
+  color: var(--text-secondary, #aaa);
+}
+
 /* Topic Trail */
 .topic-trail {
   margin-top: var(--space-2xl);
@@ -3294,6 +3357,33 @@ button {
   font-size: 0.75rem;
   color: rgba(255,255,255,0.7);
   text-transform: capitalize;
+}
+
+/* Weekly Saga Banner */
+.radio-weekly-saga {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  margin: 10px 0 4px;
+  background: rgba(255, 107, 53, 0.1);
+  border: 1px solid rgba(255, 107, 53, 0.25);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  flex-wrap: wrap;
+}
+.radio-weekly-saga-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-primary, #ff6b35);
+  white-space: nowrap;
+}
+.radio-weekly-saga-text {
+  color: rgba(255,255,255,0.8);
+  font-style: italic;
+  line-height: 1.35;
 }
 
 .radio-cat-icon {

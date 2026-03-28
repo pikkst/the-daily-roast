@@ -45,6 +45,8 @@
     els.cover       = document.getElementById('radio-cover');
     els.coverImg    = document.getElementById('radio-cover-img');
     els.categories  = document.getElementById('radio-categories');
+    els.weeklySaga  = document.getElementById('radio-weekly-saga');
+    els.weeklySagaText = document.getElementById('radio-weekly-saga-text');
     els.playerSection = document.getElementById('radio-player-section');
     els.playBtn     = document.getElementById('radio-play-btn');
     els.playIcon    = document.getElementById('play-icon');
@@ -117,6 +119,7 @@
       broadcast = data[0];
       renderBroadcast();
       renderBroadcastArchive();
+      loadWeeklySaga(db);
       startScheduleTicker();
     } catch (err) {
       console.error('Error loading broadcast:', err);
@@ -148,6 +151,34 @@
       deferredInstallPrompt = null;
       if (els.installBtn) els.installBtn.disabled = true;
     });
+  }
+
+  // ── Weekly Saga Banner ──
+
+  async function loadWeeklySaga(db) {
+    if (!db || !els.weeklySaga || !els.weeklySagaText) return;
+    try {
+      const { data: summaries } = await db
+        .from('weekly_roast_summaries')
+        .select('id, top_article_title, week_start_date, week_end_date')
+        .order('week_start_date', { ascending: false })
+        .limit(1);
+      const summary = (summaries || [])[0];
+      if (!summary?.top_article_title) return;
+
+      const { data: items } = await db
+        .from('weekly_roast_items')
+        .select('title, absurdity_score')
+        .eq('summary_id', summary.id)
+        .order('absurdity_score', { ascending: false })
+        .limit(1);
+
+      const sagaTitle = (items && items[0]?.title) || summary.top_article_title;
+      els.weeklySagaText.textContent = sagaTitle;
+      els.weeklySaga.style.display = 'flex';
+    } catch (_) {
+      // Best-effort only — saga banner is non-critical
+    }
   }
 
   // ── Render ──
