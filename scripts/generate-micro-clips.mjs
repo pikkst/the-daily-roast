@@ -120,20 +120,36 @@ function buildClipPlan(row) {
 
 async function ensureClipBucket() {
   try {
-    const { data: buckets } = await db.storage.listBuckets();
+    const { data: buckets, error: listErr } = await db.storage.listBuckets();
+    if (listErr) throw new Error(`Cannot list buckets: ${listErr.message}`);
+
     const exists = (buckets || []).some((b) => b.name === CLIP_BUCKET);
     if (exists) return;
 
-    const { error } = await db.storage.createBucket(CLIP_BUCKET, {
+    // Try to create with 50MB limit (Supabase free-tier max)
+    let { error } = await db.storage.createBucket(CLIP_BUCKET, {
       public: true,
       allowedMimeTypes: ['video/mp4'],
-      fileSizeLimit: 80 * 1024 * 1024
+      fileSizeLimit: 50 * 1024 * 1024
     });
+
+    // If that fails (e.g. plan doesn't support fileSizeLimit), retry bare
     if (error) {
-      console.warn(`Clip bucket create warning: ${error.message}`);
+      console.warn(`  ⚠️  Bucket create with size limit failed (${error.message}), retrying without limit...`);
+      ({ error } = await db.storage.createBucket(CLIP_BUCKET, { public: true }));
     }
+
+    if (error) {
+      throw new Error(
+        `Could not create storage bucket "${CLIP_BUCKET}": ${error.message}\n` +
+        `  👉 Fix: Go to Supabase → Storage → New bucket → name: "${CLIP_BUCKET}", Public: on`
+      );
+    }
+
+    console.log(`  📦 Created storage bucket: ${CLIP_BUCKET}`);
   } catch (err) {
-    console.warn(`Clip bucket check warning: ${err.message}`);
+    // Re-throw so main() fails fast with a clear message instead of "Bucket not found" later
+    throw err;
   }
 }
 
