@@ -63,6 +63,39 @@ const BGM_VOLUME = Number.isFinite(parsedBgmVolume)
   : 0.10;
 const BGM_THEMES = ['upbeat', 'chill', 'funky', 'dramatic'];
 
+function normalizeMultilineEnv(value, fallback) {
+  const normalized = String(value || '')
+    .replace(/\\n/g, '\n')
+    .trim();
+  return normalized || fallback;
+}
+
+const DEFAULT_PLATFORM_PROMO_BRIEF = 'Promote The Daily Roast platform in one short mid-show station break. Mention daily parody radio, fresh satire stories, and weekly top list. Keep it witty, natural, and under 2 lines of dialogue total.';
+const DEFAULT_HOST_BIO_JOE = 'Joe is 39, former late-night news producer turned radio anchor. Dry, composed, skeptical, and precise. Loves understated punchlines, policy absurdities, and callback humor.';
+const DEFAULT_HOST_BIO_JANE = 'Jane is 34, ex-culture reporter and improv comic. Fast, playful, and bold with tangents. She pushes momentum, throws surprising metaphors, and can make Joe crack.';
+const DEFAULT_HOST_SHARED_HISTORY = 'Joe and Jane have hosted this satire format together for years. They trust each other, tease each other without cruelty, and reference past bits like old colleagues, newsroom chaos, and recurring fictional experts.';
+const DEFAULT_HOST_MEMORY_BANK = 'Recurring memories: the 2019 coffee-machine meltdown before airtime; the fake economist caller "Dr. Vello Margin"; Joe losing a bet about parliamentary drama timing; Jane comparing every tech launch to a chaotic school play.';
+const DEFAULT_TANGENT_STYLE_GUIDE = 'Allow short natural tangents that feel human: quick detours into personal memory, newsroom history, or historical analogy, then return smoothly to the story.';
+
+const PLATFORM_PROMO_BRIEF = normalizeMultilineEnv(process.env.PLATFORM_PROMO_BRIEF, DEFAULT_PLATFORM_PROMO_BRIEF);
+const HOST_BIO_JOE = normalizeMultilineEnv(process.env.HOST_BIO_JOE, DEFAULT_HOST_BIO_JOE);
+const HOST_BIO_JANE = normalizeMultilineEnv(process.env.HOST_BIO_JANE, DEFAULT_HOST_BIO_JANE);
+const HOST_SHARED_HISTORY = normalizeMultilineEnv(process.env.HOST_SHARED_HISTORY, DEFAULT_HOST_SHARED_HISTORY);
+const HOST_MEMORY_BANK = normalizeMultilineEnv(process.env.HOST_MEMORY_BANK, DEFAULT_HOST_MEMORY_BANK);
+const TANGENT_STYLE_GUIDE = normalizeMultilineEnv(process.env.TANGENT_STYLE_GUIDE, DEFAULT_TANGENT_STYLE_GUIDE);
+const parsedTargetTangents = Number(process.env.TARGET_TANGENTS_PER_EPISODE || '3');
+const TARGET_TANGENTS_PER_EPISODE = Number.isFinite(parsedTargetTangents)
+  ? Math.max(1, Math.min(6, Math.floor(parsedTargetTangents)))
+  : 3;
+const parsedMemoryLookbackDays = Number(process.env.MEMORY_LOOKBACK_DAYS || '14');
+const MEMORY_LOOKBACK_DAYS = Number.isFinite(parsedMemoryLookbackDays)
+  ? Math.max(3, Math.min(30, Math.floor(parsedMemoryLookbackDays)))
+  : 14;
+const parsedMemoryMaxLinks = Number(process.env.MEMORY_MAX_LINKS || '8');
+const MEMORY_MAX_LINKS = Number.isFinite(parsedMemoryMaxLinks)
+  ? Math.max(3, Math.min(20, Math.floor(parsedMemoryMaxLinks)))
+  : 8;
+
 function parseListEnv(value) {
   return String(value || '')
     .split(',')
@@ -504,6 +537,138 @@ function buildContinuityNotes(recentBroadcasts) {
   }).join('\n');
 }
 
+function extractKeywords(text) {
+  const stopwords = new Set([
+    'the', 'and', 'for', 'that', 'this', 'with', 'from', 'have', 'has', 'was', 'were',
+    'will', 'into', 'about', 'after', 'before', 'over', 'under', 'than', 'then', 'also',
+    'they', 'their', 'them', 'your', 'you', 'our', 'out', 'off', 'new', 'all', 'not',
+    'are', 'but', 'his', 'her', 'its', 'who', 'what', 'when', 'where', 'why', 'how'
+  ]);
+
+  return Array.from(
+    new Set(
+      String(text || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .map(t => t.trim())
+        .filter(Boolean)
+        .filter(t => t.length >= 4)
+        .filter(t => !stopwords.has(t))
+    )
+  );
+}
+
+function dateKeyShort(dateInput) {
+  const d = new Date(dateInput);
+  if (Number.isNaN(d.getTime())) return 'unknown-date';
+  return d.toISOString().slice(0, 10);
+}
+
+function scoreKeywordOverlap(currentKeywords, pastKeywords) {
+  if (!currentKeywords?.length || !pastKeywords?.length) return 0;
+
+  const current = new Set(currentKeywords);
+  const past = new Set(pastKeywords);
+
+  let shared = 0;
+  for (const token of current) {
+    if (past.has(token)) shared += 1;
+  }
+
+  if (shared === 0) return 0;
+  const union = new Set([...current, ...past]).size;
+  return shared / Math.max(1, union);
+}
+
+async function fetchTopicalMemoryLinks(db, currentArticles, daysBack = MEMORY_LOOKBACK_DAYS, maxLinks = MEMORY_MAX_LINKS) {
+  const since = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
+
+  try {
+    const { data, error } = await db
+      .from('broadcasts')
+      .select('id, title, created_at, category_summary')
+      .eq('published', true)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (error) throw error;
+
+    const rows = data || [];
+    const candidates = [];
+
+    for (const row of rows) {
+      const summary = row.category_summary || {};
+      for (const [category, topicTitle] of Object.entries(summary)) {
+        if (!topicTitle) continue;
+        candidates.push({
+          category,
+          topicTitle: String(topicTitle),
+          broadcastTitle: String(row.title || ''),
+          createdAt: row.created_at,
+          keywords: extractKeywords(topicTitle)
+        });
+      }
+    }
+
+    const links = [];
+
+    for (const article of currentArticles || []) {
+      const currentText = `${article?.title || ''} ${article?.excerpt || ''}`;
+      const currentKeywords = extractKeywords(currentText);
+      if (currentKeywords.length === 0) continue;
+
+      let best = null;
+
+      for (const candidate of candidates) {
+        if (String(candidate.topicTitle).toLowerCase() === String(article.title || '').toLowerCase()) {
+          continue;
+        }
+
+        const similarity = scoreKeywordOverlap(currentKeywords, candidate.keywords);
+        if (similarity < 0.12) continue;
+
+        const ageDays = Math.max(0, Math.floor((Date.now() - new Date(candidate.createdAt).getTime()) / (24 * 60 * 60 * 1000)));
+        const recencyBoost = Math.max(0.15, 1 - ageDays / Math.max(1, daysBack));
+        const score = similarity * recencyBoost;
+
+        if (!best || score > best.score) {
+          best = {
+            score,
+            articleCategory: article.category_slug,
+            articleTitle: article.title,
+            matchedCategory: candidate.category,
+            matchedTopic: candidate.topicTitle,
+            matchedDate: candidate.createdAt,
+            matchedBroadcast: candidate.broadcastTitle
+          };
+        }
+      }
+
+      if (best) links.push(best);
+    }
+
+    links.sort((a, b) => b.score - a.score);
+    return links.slice(0, maxLinks);
+  } catch (err) {
+    console.warn(`  ⚠️  Could not build topical memory links: ${err.message}`);
+    return [];
+  }
+}
+
+function buildTopicalMemoryNotes(memoryLinks, daysBack = MEMORY_LOOKBACK_DAYS) {
+  if (!Array.isArray(memoryLinks) || memoryLinks.length === 0) {
+    return `No strong topical links found in the last ${daysBack} days.`;
+  }
+
+  return memoryLinks.map((link, idx) => {
+    const when = dateKeyShort(link.matchedDate);
+    const confidence = Math.round(link.score * 100);
+    return `${idx + 1}. Current [${link.articleCategory}] "${link.articleTitle}" likely follows ${when} [${link.matchedCategory}] "${link.matchedTopic}" (${confidence}% topical overlap). Add a brief callback on what changed since then.`;
+  }).join('\n');
+}
+
 function getTallinnDateKey(dateInput = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: TALLINN_TIMEZONE,
@@ -753,12 +918,21 @@ ${serialized}`;
 
 // ---------- Step 2: Generate Comedy Script ----------
 
-async function generateScript(articles, liveNotice, continuityNotes, edition, retries = 2) {
+async function generateScript(articles, liveNotice, continuityNotes, topicalMemoryNotes, edition, retries = 2) {
   console.log('🎙️  Generating comedy radio script...\n');
 
   const articleSummaries = articles.map(a =>
     `- [${CATEGORY_ICONS[a.category_slug]} ${a.category_name}] "${a.title}" — ${a.excerpt}`
   ).join('\n');
+
+  const hostPersonaBrief = [
+    `Joe bio: ${HOST_BIO_JOE}`,
+    `Jane bio: ${HOST_BIO_JANE}`,
+    `Shared history: ${HOST_SHARED_HISTORY}`,
+    `Shared memory bank: ${HOST_MEMORY_BANK}`,
+    `Tangent style guide: ${TANGENT_STYLE_GUIDE}`,
+    `Target tangent count this episode: ${TARGET_TANGENTS_PER_EPISODE}`
+  ].join('\n');
 
   const prompt = `You are the head writer for "The Daily Roast Radio" — a sharp, story-first comedy news podcast hosted by two anchors:
 
@@ -770,6 +944,15 @@ ${articleSummaries}
 
 EARLIER BROADCAST CONTEXT (last 24h):
 ${continuityNotes}
+
+TOPICAL MEMORY LINKS (last ${MEMORY_LOOKBACK_DAYS} days):
+${topicalMemoryNotes}
+
+HOST PERSONALITY + BACKSTORY (MANDATORY CONTINUITY INPUT):
+${hostPersonaBrief}
+
+PLATFORM PROMO BRIEF (MANDATORY MID-SHOW SLOT):
+${PLATFORM_PROMO_BRIEF}
 
 CURRENT EDITION:
 - ${edition.label} (${edition.nominalTime} Tallinn time)
@@ -786,7 +969,11 @@ WRITE A COMPLETE RADIO SHOW SCRIPT covering ALL ${articles.length} stories. The 
   - Include a concise "what happened" recap and a clear "why this matters" angle before the biggest joke run
   - 6-10 lines of dialogue per story with genuine comedy
    - Include at least one fictional "expert quote" or "listener call-in" per story
-4. **WRAP-UP** — Final banter, use the edition-specific signoff instruction above
+4. **MID-SHOW STATION BREAK** — Exactly one short promo break in the middle of the episode.
+  - Keep it to 2-4 lines total.
+  - Use the PLATFORM PROMO BRIEF above.
+  - Make it sound naturally in-character for Joe and Jane.
+5. **WRAP-UP** — Final banter, use the edition-specific signoff instruction above
 
 LENGTH BUDGET (MANDATORY):
 - Cold open: 4-6 lines
@@ -802,6 +989,7 @@ CONTENT QUALITY RULES (VERY IMPORTANT):
 - Treat each segment like mini-editorial satire: first clarity, then absurdity.
 - Use one perspective shift per story (citizen angle, business angle, policy angle, culture angle, or global angle).
 - Vary pacing: quick jab -> analysis beat -> callback -> stronger punchline.
+- If a topical memory link is provided for a story, include one explicit continuity callback (what changed since earlier coverage).
 
 COMEDY STYLE:
 - Deadpan absurdity (treat insane things as normal)
@@ -812,6 +1000,14 @@ COMEDY STYLE:
 - Each line should be ~1-3 sentences (natural speech pacing)
 - Keep hosts distinct: Joe = dry and surgical; Jane = energetic and surprising.
 - Prefer clever comparisons/metaphors over random nonsense.
+- Reflect host backstory subtly in tone, references, and chemistry (do not read bios out loud directly).
+
+CONTROLLED HUMAN TANGENTS (MANDATORY):
+- Include approximately ${TARGET_TANGENTS_PER_EPISODE} short tangent moments across the whole episode.
+- A tangent can be: a quick personal memory, a newsroom memory, or a historical comparison.
+- Each tangent should last 1-2 lines max, then return to the story with a bridge line.
+- Do not let tangents derail story clarity or consume a full segment.
+- Reuse items from the shared memory bank when natural, but vary wording so it feels spontaneous.
 
 HOST AUTHENTICITY MODE (MANDATORY):
 - Joe and Jane must sound like real radio personalities talking to humans, not AI assistants explaining themselves.
@@ -832,6 +1028,8 @@ IMPORTANT:
 - Avoid reusing the same punchline or setup from earlier broadcasts listed in context.
 - Output only spoken script lines (no stage directions, no SFX markers, no narrator labels).
 - Avoid robotic wording like "as an AI" or "as a language model".
+- Keep the promo section clearly marked by conversational phrasing such as "quick station break" or equivalent, but do not use bracketed production cues.
+- Whenever a tangent appears, ensure the next 1-2 lines reconnect cleanly to the current headline.
 
 Also choose a background music theme from: upbeat, chill, funky, dramatic
 
@@ -1320,6 +1518,8 @@ async function main() {
   const recentContext = await fetchRecentBroadcastContext(db, 24);
   const continuityNotes = buildContinuityNotes(recentContext.broadcasts);
   const articles = await fetchArticlesPerCategory(db, recentContext.usedArticleIds);
+  const topicalMemoryLinks = await fetchTopicalMemoryLinks(db, articles, MEMORY_LOOKBACK_DAYS, MEMORY_MAX_LINKS);
+  const topicalMemoryNotes = buildTopicalMemoryNotes(topicalMemoryLinks, MEMORY_LOOKBACK_DAYS);
 
   if (articles.length < 3) {
     console.error(`❌ Not enough articles (${articles.length}). Need at least 3 categories. Exiting.`);
@@ -1331,7 +1531,7 @@ async function main() {
   const liveNotice = await fetchPoltsamaaWeather();
   console.log(`🌦️  Live notice: ${liveNotice.localDate}, ${liveNotice.localTime} (${TALLINN_TIMEZONE}) — ${liveNotice.summary}`);
   console.log(`🕒 Edition: ${edition.label} (${edition.nominalTime} Tallinn)`);
-  const scriptData = await generateScript(articles, liveNotice, continuityNotes, edition);
+  const scriptData = await generateScript(articles, liveNotice, continuityNotes, topicalMemoryNotes, edition);
 
   if (!scriptData) {
     console.error('❌ Script generation failed. Exiting.');

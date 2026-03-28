@@ -10,8 +10,8 @@
   </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Weekly Top 10 - The Daily Roast</title>
-  <meta name="description" content="The Daily Roast Weekly Top 10: the most roasted and most absurd satire stories of the week.">
+  <title>Contact - The Daily Roast</title>
+  <meta name="description" content="Contact The Daily Roast for feedback, corrections, technical issues, or partnerships.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,26 +35,40 @@
         <div class="header-links">
           <a href="/" class="back-link">← Back to Headlines</a>
           <a href="about.html" class="back-link">About</a>
-          <a href="contact.html" class="back-link">Contact</a>
+          <a href="radio.html" class="back-link">📻 Radio</a>
         </div>
       </div>
     </div>
   </header>
 
   <main class="site-main">
-    <div class="container weekly-page">
+    <div class="container info-page">
       <div class="weekly-page-hero">
-        <p class="weekly-page-kicker">🏆 WEEKLY RECAP</p>
-        <h2 class="weekly-page-title">Top 10 Most Roasted Stories</h2>
-        <p class="weekly-page-subtitle" id="weekly-page-subtitle">Loading this week's winners...</p>
+        <p class="weekly-page-kicker">CONTACT</p>
+        <h2 class="weekly-page-title">Get In Touch</h2>
+        <p class="weekly-page-subtitle">Feedback, corrections, support requests, and partnerships are welcome.</p>
       </div>
 
-      <section id="weekly-top-card-wrap" style="display:none;"></section>
+      <section class="info-section">
+        <h3>Email Channels</h3>
+        <p>Main inbox: <a href="mailto:hello@dailyroast.news">hello@dailyroast.news</a></p>
+        <p>Corrections: <a href="mailto:corrections@dailyroast.news">corrections@dailyroast.news</a></p>
+        <p>Partnerships: <a href="mailto:partners@dailyroast.news">partners@dailyroast.news</a></p>
+      </section>
 
-      <section class="weekly-list-section">
-        <div class="weekly-list" id="weekly-list">
-          <div class="weekly-loading">Gathering absurdity metrics...</div>
-        </div>
+      <section class="info-section">
+        <h3>For Faster Help, Include</h3>
+        <ul class="info-list">
+          <li>Page URL or episode title.</li>
+          <li>What happened vs what you expected.</li>
+          <li>Screenshot for UI/playback issues.</li>
+          <li>Your device and browser for technical bugs.</li>
+        </ul>
+      </section>
+
+      <section class="info-section">
+        <h3>Response Times</h3>
+        <p>Typical response window is 24-72 hours. Publishing failures and playback outages are prioritized.</p>
       </section>
     </div>
   </main>
@@ -71,6 +85,11 @@
   </footer>
 
   <script src="js/config.js"></script>
-  <script src="js/weekly.js"></script>
+  <script>
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
 </body>
 </html>

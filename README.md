@@ -199,6 +199,15 @@ Cloudflare will automatically redeploy whenever you push to the `main` branch.
 | `BGM_TRACK_CHILL` | Comma-separated fallback track URLs/paths for chill theme | No |
 | `BGM_TRACK_FUNKY` | Comma-separated fallback track URLs/paths for funky theme | No |
 | `BGM_TRACK_DRAMATIC` | Comma-separated fallback track URLs/paths for dramatic theme | No |
+| `PLATFORM_PROMO_BRIEF` | Mid-show promo/sponsor writing brief used by script generator | No |
+| `HOST_BIO_JOE` | Joe background/persona text used for script voice consistency | No |
+| `HOST_BIO_JANE` | Jane background/persona text used for script voice consistency | No |
+| `HOST_SHARED_HISTORY` | Shared duo backstory used for callbacks/chemistry | No |
+| `HOST_MEMORY_BANK` | Reusable memories/running bits for natural callbacks and tangents | No |
+| `TANGENT_STYLE_GUIDE` | Style rule for short off-topic memory/history detours | No |
+| `TARGET_TANGENTS_PER_EPISODE` | Approx number of short tangents per episode (default: `3`, range: `1-6`) | No |
+| `MEMORY_LOOKBACK_DAYS` | How far back to search previous broadcasts for topical continuity links (default: `14`) | No |
+| `MEMORY_MAX_LINKS` | Maximum continuity links injected into prompt (default: `8`) | No |
 
 ### Adjusting Generation Schedule
 
@@ -217,6 +226,13 @@ For YouTube Podcasts, create or mark the playlist as a Podcast in YouTube Studio
 
 Generated radio audio supports optional background music mixing with default volume at 10%.
 Use free or licensed tracks from sources like Pixabay Music, Uppbeat, Artlist, or Epidemic and provide links via `BGM_TRACKS_JSON` (or `BGM_TRACK_*` fallback vars).
+
+You can tune script personality and ad copy via prompt context env vars:
+- `PLATFORM_PROMO_BRIEF` controls the mid-show platform/sponsor break style and message.
+- `HOST_BIO_JOE`, `HOST_BIO_JANE`, and `HOST_SHARED_HISTORY` control host backstory and chemistry.
+- `HOST_MEMORY_BANK`, `TANGENT_STYLE_GUIDE`, and `TARGET_TANGENTS_PER_EPISODE` control natural short detours into memories/history while keeping the script on-topic.
+- `MEMORY_LOOKBACK_DAYS` and `MEMORY_MAX_LINKS` enable week-level topical memory so scripts can connect similar stories from previous days/weeks.
+- For multiline values in GitHub Secrets, use `\n` for line breaks.
 
 Example `BGM_TRACKS_JSON`:
 

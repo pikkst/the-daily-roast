@@ -10,8 +10,8 @@
   </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Weekly Top 10 - The Daily Roast</title>
-  <meta name="description" content="The Daily Roast Weekly Top 10: the most roasted and most absurd satire stories of the week.">
+  <title>About - The Daily Roast</title>
+  <meta name="description" content="About The Daily Roast: who we are, how satire is made, and our editorial principles.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +34,7 @@
         </a>
         <div class="header-links">
           <a href="/" class="back-link">← Back to Headlines</a>
-          <a href="about.html" class="back-link">About</a>
+          <a href="radio.html" class="back-link">📻 Radio</a>
           <a href="contact.html" class="back-link">Contact</a>
         </div>
       </div>
@@ -42,19 +42,42 @@
   </header>
 
   <main class="site-main">
-    <div class="container weekly-page">
+    <div class="container info-page">
       <div class="weekly-page-hero">
-        <p class="weekly-page-kicker">🏆 WEEKLY RECAP</p>
-        <h2 class="weekly-page-title">Top 10 Most Roasted Stories</h2>
-        <p class="weekly-page-subtitle" id="weekly-page-subtitle">Loading this week's winners...</p>
+        <p class="weekly-page-kicker">ABOUT</p>
+        <h2 class="weekly-page-title">Who We Are</h2>
+        <p class="weekly-page-subtitle">The Daily Roast is an AI-assisted satire platform. We turn real headline context into parody content for entertainment.</p>
       </div>
 
-      <section id="weekly-top-card-wrap" style="display:none;"></section>
+      <section class="info-section">
+        <h3>What We Publish</h3>
+        <p>We publish satirical stories, radio-style parody episodes, weekly recap lists, and playful quiz content. Everything is clearly framed as fiction and parody.</p>
+      </section>
 
-      <section class="weekly-list-section">
-        <div class="weekly-list" id="weekly-list">
-          <div class="weekly-loading">Gathering absurdity metrics...</div>
-        </div>
+      <section class="info-section">
+        <h3>How It Is Made</h3>
+        <ul class="info-list">
+          <li>We gather headline context from current events.</li>
+          <li>AI helps generate draft text and media assets.</li>
+          <li>Pipelines run on schedule for daily publishing.</li>
+          <li>Outputs are checked against parody/disclaimer guardrails.</li>
+        </ul>
+      </section>
+
+      <section class="info-section">
+        <h3>Editorial Guardrails</h3>
+        <ul class="info-list">
+          <li>Clarity first: jokes should still be understandable.</li>
+          <li>Punch up: satire targets systems, hypocrisy, and absurdity.</li>
+          <li>Transparency: content is labeled fictional/parody.</li>
+          <li>Continuous improvement from user feedback.</li>
+        </ul>
+      </section>
+
+      <section class="info-section">
+        <h3>Need To Reach Us?</h3>
+        <p>If you have questions, corrections, or partnership ideas, use our contact page.</p>
+        <p><a href="contact.html" class="btn btn-outline">Open Contact Page</a></p>
       </section>
     </div>
   </main>
@@ -71,6 +94,11 @@
   </footer>
 
   <script src="js/config.js"></script>
-  <script src="js/weekly.js"></script>
+  <script>
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
 </body>
 </html>

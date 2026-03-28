@@ -1249,6 +1249,57 @@ button {
   text-align: center;
 }
 
+.footer-copy a {
+  color: rgba(255,255,255,0.8);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.footer-copy a:hover {
+  color: #fff;
+}
+
+/* ---------- Info Pages ---------- */
+.info-page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: var(--space-2xl) var(--space-lg);
+}
+
+.info-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-lg);
+}
+
+.info-section h3 {
+  font-size: 1.25rem;
+  color: var(--color-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.info-section p {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.info-section p:last-child {
+  margin-bottom: 0;
+}
+
+.info-list {
+  list-style: disc;
+  padding-left: 20px;
+}
+
+.info-list li {
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
 /* ---------- Skeleton Loading ---------- */
 .skeleton-loading .skeleton-line {
   background: linear-gradient(90deg, var(--color-bg) 25%, var(--color-bg-alt) 50%, var(--color-bg) 75%);
