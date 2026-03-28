@@ -43,9 +43,9 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          REPLY_AUTHOR_NAME: ${{ vars.REPLY_AUTHOR_NAME || 'The Daily Roast 🎙️' }}
-          REPLY_LOOKBACK_HOURS: ${{ github.event.inputs.lookback_hours || vars.REPLY_LOOKBACK_HOURS || '48' }}
-          REPLY_MAX_PER_RUN: ${{ github.event.inputs.max_per_run || vars.REPLY_MAX_PER_RUN || '10' }}
+          REPLY_AUTHOR_NAME: ${{ secrets.REPLY_AUTHOR_NAME || vars.REPLY_AUTHOR_NAME || 'The Daily Roast 🎙️' }}
+          REPLY_LOOKBACK_HOURS: ${{ github.event.inputs.lookback_hours || secrets.REPLY_LOOKBACK_HOURS || vars.REPLY_LOOKBACK_HOURS || '48' }}
+          REPLY_MAX_PER_RUN: ${{ github.event.inputs.max_per_run || secrets.REPLY_MAX_PER_RUN || vars.REPLY_MAX_PER_RUN || '10' }}
           DRY_RUN: ${{ (inputs.dry_run == true || github.event.inputs.dry_run == 'true') && '1' || '0' }}
         run: |
           echo "💬 Running AI comment auto-responder..."

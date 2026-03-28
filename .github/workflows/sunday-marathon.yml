@@ -92,10 +92,10 @@ jobs:
           YT_PODCAST_PLAYLIST_ID: ${{ vars.YT_PODCAST_PLAYLIST_ID || secrets.YT_PODCAST_PLAYLIST_ID || '' }}
 
           # Micro clips
-          SUNDAY_GENERATE_CLIPS: ${{ vars.SUNDAY_GENERATE_CLIPS || '1' }}
-          SUNDAY_CLIP_COUNT: ${{ vars.SUNDAY_CLIP_COUNT || '3' }}
-          SUNDAY_CLIP_SECONDS: ${{ vars.SUNDAY_CLIP_SECONDS || '30' }}
-          SUNDAY_CLIP_BUCKET: ${{ vars.SUNDAY_CLIP_BUCKET || 'broadcast-clips' }}
+          SUNDAY_GENERATE_CLIPS: ${{ secrets.SUNDAY_GENERATE_CLIPS || vars.SUNDAY_GENERATE_CLIPS || '1' }}
+          SUNDAY_CLIP_COUNT: ${{ secrets.SUNDAY_CLIP_COUNT || vars.SUNDAY_CLIP_COUNT || '3' }}
+          SUNDAY_CLIP_SECONDS: ${{ secrets.SUNDAY_CLIP_SECONDS || vars.SUNDAY_CLIP_SECONDS || '30' }}
+          SUNDAY_CLIP_BUCKET: ${{ secrets.SUNDAY_CLIP_BUCKET || vars.SUNDAY_CLIP_BUCKET || 'broadcast-clips' }}
         run: |
           echo "🎯 Running Sunday marathon orchestration..."
           node scripts/run-sunday-marathon.mjs
