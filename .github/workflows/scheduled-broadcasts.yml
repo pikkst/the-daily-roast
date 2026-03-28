@@ -172,6 +172,10 @@ jobs:
           PROMO_BUMPER_TRACK_EVENING: ${{ secrets.PROMO_BUMPER_TRACK_EVENING || vars.PROMO_BUMPER_TRACK_EVENING || '' }}
           PROMO_BUMPER_SECONDS: ${{ secrets.PROMO_BUMPER_SECONDS || vars.PROMO_BUMPER_SECONDS || '1.0' }}
           PROMO_PAUSE_SECONDS: ${{ secrets.PROMO_PAUSE_SECONDS || vars.PROMO_PAUSE_SECONDS || '0.8' }}
+          # Podbean auto-publish
+          ENABLE_PODBEAN: ${{ vars.ENABLE_PODBEAN || '0' }}
+          PODBEAN_CLIENT_ID: ${{ secrets.PODBEAN_CLIENT_ID }}
+          PODBEAN_CLIENT_SECRET: ${{ secrets.PODBEAN_CLIENT_SECRET }}
         run: |
           echo "📻 Generating scheduled broadcast..."
           echo "🕒 Slot: $BROADCAST_SLOT"

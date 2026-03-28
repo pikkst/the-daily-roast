@@ -123,6 +123,9 @@ const EXTERNAL_RESEARCH_MAX_ITEMS = Number.isFinite(parsedExternalResearchItems)
   ? Math.max(1, Math.min(6, Math.floor(parsedExternalResearchItems)))
   : 3;
 const ENABLE_LISTENER_PUNCHLINES = process.env.ENABLE_LISTENER_PUNCHLINES !== '0';
+const PODBEAN_CLIENT_ID = String(process.env.PODBEAN_CLIENT_ID || '').trim();
+const PODBEAN_CLIENT_SECRET = String(process.env.PODBEAN_CLIENT_SECRET || '').trim();
+const ENABLE_PODBEAN = process.env.ENABLE_PODBEAN === '1' && !!PODBEAN_CLIENT_ID && !!PODBEAN_CLIENT_SECRET;
 const parsedPunchlineLookbackHours = Number(process.env.LISTENER_PUNCHLINE_LOOKBACK_HOURS || '72');
 const LISTENER_PUNCHLINE_LOOKBACK_HOURS = Number.isFinite(parsedPunchlineLookbackHours)
   ? Math.max(12, Math.min(336, Math.floor(parsedPunchlineLookbackHours)))
@@ -153,6 +156,96 @@ const parsedPromoPauseSeconds = Number(process.env.PROMO_PAUSE_SECONDS || '0.7')
 const PROMO_PAUSE_SECONDS = Number.isFinite(parsedPromoPauseSeconds)
   ? Math.max(0.2, Math.min(2.5, parsedPromoPauseSeconds))
   : 0.7;
+
+// ---------- Podbean API Integration ----------
+async function podbeanGetToken() {
+  const credentials = Buffer.from(`${PODBEAN_CLIENT_ID}:${PODBEAN_CLIENT_SECRET}`).toString('base64');
+  const res = await fetch('https://api.podbean.com/v1/oauth/token', {
+    method: 'POST',
+    headers: { 'Authorization': `Basic ${credentials}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'grant_type=client_credentials'
+  });
+  if (!res.ok) throw new Error(`Podbean token: ${res.status} ${await res.text()}`);
+  const data = await res.json();
+  return data.access_token;
+}
+
+async function podbeanAuthorizeUpload(token, filename, filesize, contentType) {
+  const params = new URLSearchParams({ access_token: token, filename, filesize: String(filesize), content_type: contentType });
+  const res = await fetch(`https://api.podbean.com/v1/medias/podfile?${params}`);
+  if (!res.ok) throw new Error(`Podbean upload auth: ${res.status} ${await res.text()}`);
+  return await res.json(); // { presigned_url, file_key }
+}
+
+async function podbeanPutFile(presignedUrl, buffer, contentType) {
+  const res = await fetch(presignedUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': contentType },
+    body: buffer
+  });
+  if (!res.ok) throw new Error(`Podbean S3 PUT: ${res.status}`);
+}
+
+async function uploadBroadcastToPodbean(audioBuffer, { title, script, coverImageUrl }) {
+  if (!ENABLE_PODBEAN) return null;
+  try {
+    console.log('\n🎙️  Uploading to Podbean...');
+    const token = await podbeanGetToken();
+
+    // Upload audio
+    const audioFilename = `${Date.now()}-broadcast.wav`;
+    const { presigned_url: audioPresigned, file_key: mediaKey } = await podbeanAuthorizeUpload(
+      token, audioFilename, audioBuffer.length, 'audio/wav'
+    );
+    await podbeanPutFile(audioPresigned, audioBuffer, 'audio/wav');
+    console.log(`  ✅ Audio uploaded (${Math.round(audioBuffer.length / 1024)}KB)`);
+
+    // Upload cover image
+    let logoKey = null;
+    if (coverImageUrl) {
+      try {
+        const imgRes = await fetch(coverImageUrl);
+        if (imgRes.ok) {
+          const imgBuf = Buffer.from(await imgRes.arrayBuffer());
+          const { presigned_url: imgPresigned, file_key: imgKey } = await podbeanAuthorizeUpload(
+            token, `${Date.now()}-cover.jpg`, imgBuf.length, 'image/jpeg'
+          );
+          await podbeanPutFile(imgPresigned, imgBuf, 'image/jpeg');
+          logoKey = imgKey;
+          console.log('  🖼️  Cover uploaded');
+        }
+      } catch (imgErr) {
+        console.warn(`  ⚠️  Cover upload skipped: ${imgErr.message}`);
+      }
+    }
+
+    // Create episode
+    const description = script
+      ? script.substring(0, 1000).replace(/\n/g, ' ') + '…'
+      : 'Daily Roast satirical news broadcast.';
+    const epParams = new URLSearchParams({
+      access_token: token,
+      title,
+      content: description,
+      status: 'publish',
+      type: 'public',
+      media_key: mediaKey,
+      ...(logoKey ? { logo_key: logoKey } : {})
+    });
+    const epRes = await fetch('https://api.podbean.com/v1/episodes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: epParams.toString()
+    });
+    if (!epRes.ok) throw new Error(`Podbean create episode: ${epRes.status} ${await epRes.text()}`);
+    const epData = await epRes.json();
+    console.log(`  📻 Published on Podbean: ${epData.episode?.permalink_url || '(ok)'}`);
+    return epData;
+  } catch (err) {
+    console.warn(`  ⚠️  Podbean upload failed (non-fatal): ${err.message}`);
+    return null;
+  }
+}
 
 function parseListEnv(value) {
   return String(value || '')
@@ -1970,8 +2063,9 @@ async function main() {
   let audioUrl = null;
   let finalBgmTheme = normalizeBgmTheme(scriptData.bgmTheme);
   let selectedBgmTrack = null;
+  let finalAudioBuffer = null;
   if (audioResult) {
-    let finalAudioBuffer = audioResult.wavBuffer;
+    finalAudioBuffer = audioResult.wavBuffer;
 
     try {
       const mixed = await mixBackgroundMusic(audioResult.wavBuffer, scriptData.bgmTheme);
@@ -2058,7 +2152,17 @@ async function main() {
   console.log(`  📰 Articles: ${articles.length} categories`);
   console.log(`  ⏱️  Duration: ~${Math.round((audioResult?.durationSeconds || 0) / 60)} min`);
   console.log(`  💾 Saved: ${broadcast ? '✅' : '❌'}`);
+  console.log(`  🎙️  Podbean: ${ENABLE_PODBEAN ? 'enabled' : 'disabled'}`);
   console.log('='.repeat(50));
+
+  // Step 6: Auto-publish to Podbean
+  if (ENABLE_PODBEAN && finalAudioBuffer && broadcast) {
+    await uploadBroadcastToPodbean(finalAudioBuffer, {
+      title,
+      script: scriptData.script,
+      coverImageUrl
+    });
+  }
 }
 
 main().catch(err => {
