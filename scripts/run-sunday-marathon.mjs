@@ -3,6 +3,10 @@ import { spawn } from 'node:child_process';
 const SUNDAY_UPLOAD_YOUTUBE = process.env.SUNDAY_UPLOAD_YOUTUBE === '1';
 const FORCE_REPLACE_EDITION = process.env.FORCE_REPLACE_EDITION === '1';
 const RUN_WEEKLY_TOP10_BEFORE_MARATHON = process.env.RUN_WEEKLY_TOP10_BEFORE_MARATHON !== '0';
+const SUNDAY_GENERATE_CLIPS = process.env.SUNDAY_GENERATE_CLIPS !== '0';
+const SUNDAY_CLIP_COUNT = String(process.env.SUNDAY_CLIP_COUNT || '3');
+const SUNDAY_CLIP_SECONDS = String(process.env.SUNDAY_CLIP_SECONDS || '30');
+const SUNDAY_CLIP_BUCKET = String(process.env.SUNDAY_CLIP_BUCKET || 'broadcast-clips');
 const DEFAULT_SUNDAY_BUMPER = 'sounds/dragon-studio-whoosh-cinematic-376875.mp3';
 const SUNDAY_PROMO_BUMPER_TRACK = (process.env.SUNDAY_PROMO_BUMPER_TRACK || DEFAULT_SUNDAY_BUMPER).trim();
 
@@ -60,6 +64,7 @@ async function main() {
   console.log('================================');
   console.log(`Episodes planned: ${episodes.length}`);
   console.log(`YouTube upload after each episode: ${SUNDAY_UPLOAD_YOUTUBE ? 'yes' : 'no'}`);
+  console.log(`Micro clips after each episode: ${SUNDAY_GENERATE_CLIPS ? 'yes' : 'no'}`);
   console.log(`Refresh weekly-top10 first: ${RUN_WEEKLY_TOP10_BEFORE_MARATHON ? 'yes' : 'no'}`);
   console.log('');
 
@@ -90,6 +95,15 @@ async function main() {
     if (SUNDAY_UPLOAD_YOUTUBE) {
       console.log('🎬 Uploading latest generated episode to YouTube...');
       await runNodeScript('scripts/upload-latest-broadcast-youtube.mjs');
+    }
+
+    if (SUNDAY_GENERATE_CLIPS) {
+      console.log('✂️ Generating micro clips for the latest marathon episode...');
+      await runNodeScript('scripts/generate-micro-clips.mjs', {
+        CLIP_COUNT: SUNDAY_CLIP_COUNT,
+        CLIP_SECONDS: SUNDAY_CLIP_SECONDS,
+        CLIP_BUCKET: SUNDAY_CLIP_BUCKET
+      });
     }
 
     if (i < episodes.length - 1) {
