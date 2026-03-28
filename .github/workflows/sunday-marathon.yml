@@ -67,7 +67,7 @@ jobs:
           RUN_WEEKLY_TOP10_BEFORE_MARATHON: ${{ vars.RUN_WEEKLY_TOP10_BEFORE_MARATHON || '1' }}
 
           # BGM
-          BGM_VOLUME: ${{ vars.BGM_VOLUME || '0.10' }}
+          BGM_VOLUME: ${{ vars.BGM_VOLUME || '0.02' }}
           BGM_TRACKS_JSON: ${{ vars.BGM_TRACKS_JSON || secrets.BGM_TRACKS_JSON || '' }}
           BGM_TRACK_UPBEAT: ${{ vars.BGM_TRACK_UPBEAT || '' }}
           BGM_TRACK_CHILL: ${{ vars.BGM_TRACK_CHILL || '' }}

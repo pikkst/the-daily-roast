@@ -243,8 +243,9 @@ YouTube uploads now auto-generate lightweight chapter markers from script struct
 If `YT_PODCAST_PLAYLIST_ID` is set, each uploaded video is also added to that playlist.
 For YouTube Podcasts, create or mark the playlist as a Podcast in YouTube Studio first.
 
-Generated radio audio supports optional background music mixing with default volume at 10%.
+Generated radio audio supports optional background music mixing with default volume at 2%.
 Use free or licensed tracks from sources like Pixabay Music, Uppbeat, Artlist, or Epidemic and provide links via `BGM_TRACKS_JSON` (or `BGM_TRACK_*` fallback vars).
+Current default fallback track in this repo is `sounds/litesaturation-short-rock-488463.mp3`, mixed at 2% volume unless overridden.
 If no BGM env catalog is configured, the generator now falls back to built-in royalty-free default tracks so web + YouTube outputs stay consistent.
 
 The radio web player now defaults to server-mixed audio only (client-side overlay BGM disabled by default) to avoid device-specific autoplay differences, especially on mobile browsers.

@@ -68,16 +68,17 @@ const SKIP_COVER_IMAGE = process.env.SKIP_COVER_IMAGE === '1';
 const REUSE_RECENT_COVER = process.env.REUSE_RECENT_COVER === '1';
 const ENFORCE_TALLINN_SLOT_TIME = process.env.ENFORCE_TALLINN_SLOT_TIME === '1';
 const FORCE_REPLACE_EDITION = process.env.FORCE_REPLACE_EDITION === '1';
-const parsedBgmVolume = Number(process.env.BGM_VOLUME || '0.10');
+const parsedBgmVolume = Number(process.env.BGM_VOLUME || '0.02');
 const BGM_VOLUME = Number.isFinite(parsedBgmVolume)
   ? Math.min(1, Math.max(0, parsedBgmVolume))
-  : 0.10;
+  : 0.02;
 const BGM_THEMES = ['upbeat', 'chill', 'funky', 'dramatic'];
+const DEFAULT_BGM_TRACK = 'sounds/litesaturation-short-rock-488463.mp3';
 const DEFAULT_BGM_TRACKS = {
-  upbeat: ['https://cdn.pixabay.com/audio/2022/01/18/audio_d0a13f69d2.mp3'],
-  chill: ['https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a7315b.mp3'],
-  funky: ['https://cdn.pixabay.com/audio/2022/02/22/audio_d1e871676d.mp3'],
-  dramatic: ['https://cdn.pixabay.com/audio/2022/08/04/audio_2dde6a6983.mp3']
+  upbeat: [DEFAULT_BGM_TRACK],
+  chill: [DEFAULT_BGM_TRACK],
+  funky: [DEFAULT_BGM_TRACK],
+  dramatic: [DEFAULT_BGM_TRACK]
 };
 
 function normalizeMultilineEnv(value, fallback) {
@@ -160,17 +161,17 @@ function buildBgmCatalog() {
   };
 
   const rawJson = String(process.env.BGM_TRACKS_JSON || '').trim();
-  if (!rawJson) return catalog;
-
-  try {
-    const parsed = JSON.parse(rawJson);
-    for (const theme of BGM_THEMES) {
-      if (Array.isArray(parsed?.[theme])) {
-        catalog[theme] = parsed[theme].map(v => String(v || '').trim()).filter(Boolean);
+  if (rawJson) {
+    try {
+      const parsed = JSON.parse(rawJson);
+      for (const theme of BGM_THEMES) {
+        if (Array.isArray(parsed?.[theme])) {
+          catalog[theme] = parsed[theme].map(v => String(v || '').trim()).filter(Boolean);
+        }
       }
+    } catch (err) {
+      console.warn(`  ⚠️  Invalid BGM_TRACKS_JSON: ${err.message}`);
     }
-  } catch (err) {
-    console.warn(`  ⚠️  Invalid BGM_TRACKS_JSON: ${err.message}`);
   }
 
   for (const theme of BGM_THEMES) {

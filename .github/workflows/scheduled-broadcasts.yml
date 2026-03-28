@@ -147,7 +147,7 @@ jobs:
           BROADCAST_SLOT: ${{ needs.slot-check.outputs.broadcast_slot }}
           ENFORCE_TALLINN_SLOT_TIME: ${{ github.event_name == 'schedule' && '1' || '0' }}
           FORCE_REPLACE_EDITION: ${{ (inputs.replace_existing == true || github.event.inputs.replace_existing == 'true') && '1' || '0' }}
-          BGM_VOLUME: ${{ vars.BGM_VOLUME || '0.10' }}
+          BGM_VOLUME: ${{ vars.BGM_VOLUME || '0.02' }}
           BGM_TRACKS_JSON: ${{ vars.BGM_TRACKS_JSON || secrets.BGM_TRACKS_JSON || '' }}
           BGM_TRACK_UPBEAT: ${{ vars.BGM_TRACK_UPBEAT || '' }}
           BGM_TRACK_CHILL: ${{ vars.BGM_TRACK_CHILL || '' }}
@@ -188,6 +188,17 @@ jobs:
         run: |
           echo "🎬 Rendering MP4 and uploading to YouTube..."
           node scripts/upload-latest-broadcast-youtube.mjs
+
+      - name: Generate and upload micro clips
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          CLIP_COUNT: ${{ vars.CLIP_COUNT || '3' }}
+          CLIP_SECONDS: ${{ vars.CLIP_SECONDS || '30' }}
+          CLIP_BUCKET: ${{ vars.CLIP_BUCKET || 'broadcast-clips' }}
+        run: |
+          echo "✂️ Generating micro clips for Shorts/Reels/TikTok funnel..."
+          node scripts/generate-micro-clips.mjs
 
       - name: Report status
         if: always()
