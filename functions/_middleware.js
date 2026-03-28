@@ -17,6 +17,131 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;');
 }
 
+function escapeXml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function toRfc822(dateStr) {
+  const d = new Date(dateStr);
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const pad = n => String(n).padStart(2, '0');
+  return `${days[d.getUTCDay()]}, ${pad(d.getUTCDate())} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())} +0000`;
+}
+
+function formatDuration(seconds) {
+  if (!seconds || seconds < 0) return '0:00';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const pad = n => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+async function handlePodcastFeed(url) {
+  const origin = url.origin;
+  const SHOW_IMAGE = `${origin}/icons/icon-512.svg`;
+  const SHOW_TITLE = 'The Daily Roast';
+  const SHOW_DESC = 'AI-powered satirical news podcast. Hosts Joe & Jane roast the day\'s biggest headlines three times daily — sharp, absurd, and unapologetically artificial.';
+  const SHOW_AUTHOR = 'The Daily Roast';
+  const SHOW_LANG = 'et';
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/broadcasts?select=id,title,script,audio_url,cover_image_url,duration_seconds,created_at,category_summary&published=eq.true&order=created_at.desc&limit=100`,
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
+    const broadcasts = await res.json();
+
+    // Use the most recent broadcast's cover as the show art if available
+    const showImage = (Array.isArray(broadcasts) && broadcasts[0]?.cover_image_url)
+      ? broadcasts[0].cover_image_url
+      : SHOW_IMAGE;
+
+    const lastBuildDate = (Array.isArray(broadcasts) && broadcasts[0]?.created_at)
+      ? toRfc822(broadcasts[0].created_at)
+      : toRfc822(new Date().toISOString());
+
+    let items = '';
+    if (Array.isArray(broadcasts)) {
+      for (const b of broadcasts) {
+        if (!b.audio_url) continue;
+        const epTitle = escapeXml(b.title || 'Daily Roast Episode');
+        const epDesc = escapeXml(
+          b.script
+            ? b.script.substring(0, 400).replace(/\n/g, ' ') + '…'
+            : 'Tune in to today\'s Daily Roast broadcast.'
+        );
+        const pubDate = toRfc822(b.created_at);
+        const guid = `daily-roast-broadcast-${b.id}`;
+        const duration = formatDuration(b.duration_seconds);
+        const epImage = escapeXml(b.cover_image_url || showImage);
+        const audioUrl = escapeXml(b.audio_url);
+
+        items += `
+    <item>
+      <title>${epTitle}</title>
+      <description>${epDesc}</description>
+      <pubDate>${pubDate}</pubDate>
+      <guid isPermaLink="false">${guid}</guid>
+      <enclosure url="${audioUrl}" length="0" type="audio/mpeg"/>
+      <link>${escapeXml(origin)}/radio</link>
+      <itunes:title>${epTitle}</itunes:title>
+      <itunes:summary>${epDesc}</itunes:summary>
+      <itunes:author>${escapeXml(SHOW_AUTHOR)}</itunes:author>
+      <itunes:duration>${duration}</itunes:duration>
+      <itunes:image href="${epImage}"/>
+      <itunes:explicit>no</itunes:explicit>
+    </item>`;
+      }
+    }
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+  xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+  xmlns:content="http://purl.org/rss/1.0/modules/content/"
+  xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>${escapeXml(SHOW_TITLE)}</title>
+    <link>${escapeXml(origin)}/radio</link>
+    <language>${SHOW_LANG}</language>
+    <description>${escapeXml(SHOW_DESC)}</description>
+    <lastBuildDate>${lastBuildDate}</lastBuildDate>
+    <atom:link href="${escapeXml(origin)}/podcast.xml" rel="self" type="application/rss+xml"/>
+    <itunes:title>${escapeXml(SHOW_TITLE)}</itunes:title>
+    <itunes:author>${escapeXml(SHOW_AUTHOR)}</itunes:author>
+    <itunes:summary>${escapeXml(SHOW_DESC)}</itunes:summary>
+    <itunes:image href="${escapeXml(showImage)}"/>
+    <itunes:category text="Comedy"/>
+    <itunes:category text="News">
+      <itunes:category text="Daily News"/>
+    </itunes:category>
+    <itunes:explicit>no</itunes:explicit>
+    <itunes:type>episodic</itunes:type>${items}
+  </channel>
+</rss>`;
+
+    return new Response(xml, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/rss+xml; charset=utf-8',
+        'Cache-Control': 'public, max-age=1800',
+        'X-Content-Type-Options': 'nosniff',
+      }
+    });
+  } catch (err) {
+    return new Response(`<?xml version="1.0"?><rss version="2.0"><channel><title>The Daily Roast</title></channel></rss>`, {
+      status: 200, headers: { 'Content-Type': 'application/rss+xml' }
+    });
+  }
+}
+
 async function handleSitemap(url) {
   const origin = url.origin;
   try {
@@ -57,6 +182,11 @@ export async function onRequest(context) {
   // --- Dynamic Sitemap ---
   if (url.pathname === '/sitemap.xml' || url.pathname === '/sitemap') {
     return handleSitemap(url);
+  }
+
+  // --- Podcast RSS Feed ---
+  if (url.pathname === '/podcast.xml' || url.pathname === '/feed' || url.pathname === '/rss') {
+    return handlePodcastFeed(url);
   }
 
   // --- Radio OG injection ---
