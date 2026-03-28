@@ -82,11 +82,91 @@ async function selectLatestBroadcast() {
   return { row: latestWithAudio || null, hasYoutubeColumn };
 }
 
+function parseScriptLines(scriptValue) {
+  if (Array.isArray(scriptValue)) return scriptValue;
+  if (typeof scriptValue === 'string') {
+    try {
+      const parsed = JSON.parse(scriptValue);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function formatChapterTime(seconds) {
+  const total = Math.max(0, Math.floor(Number(seconds) || 0));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function detectChapterEvents(scriptLines) {
+  const events = [];
+  const pushEvent = (index, label) => {
+    if (index < 0) return;
+    events.push({ index, label });
+  };
+
+  pushEvent(0, 'Cold Open');
+
+  for (let i = 0; i < scriptLines.length; i++) {
+    const text = String(scriptLines[i]?.text || '').toLowerCase();
+
+    if (text.includes('station break') || text.includes('sponsor')) {
+      pushEvent(i, 'Station Break');
+    } else if (text.includes('reality check')) {
+      pushEvent(i, 'Reality Check');
+    } else if (text.includes('moving on') || text.includes('next up') || text.includes('from the world of')) {
+      pushEvent(i, 'Story Shift');
+    } else if (text.includes('wrap-up') || text.includes('sign off') || text.includes('see you')) {
+      pushEvent(i, 'Wrap Up');
+    }
+  }
+
+  const deduped = [];
+  let lastIndex = -999;
+  for (const ev of events.sort((a, b) => a.index - b.index)) {
+    if (ev.index - lastIndex < 4) continue;
+    deduped.push(ev);
+    lastIndex = ev.index;
+  }
+
+  return deduped.slice(0, 8);
+}
+
+function buildChapterLines(row) {
+  const scriptLines = parseScriptLines(row?.script);
+  if (scriptLines.length < 8) return [];
+
+  const totalSeconds = Math.max(1, Number(row?.duration_seconds || 0));
+  const events = detectChapterEvents(scriptLines);
+  if (events.length === 0) return [];
+
+  const lines = [];
+  let lastSecond = -999;
+  for (const ev of events) {
+    const second = Math.max(0, Math.floor((ev.index / Math.max(1, scriptLines.length - 1)) * totalSeconds));
+    if (second - lastSecond < 10) continue;
+    lines.push(`${formatChapterTime(second)} ${ev.label}`);
+    lastSecond = second;
+  }
+
+  return lines;
+}
+
 function buildDescription(row) {
   const categorySummary = row.category_summary || {};
   const lines = Object.entries(categorySummary)
     .map(([cat, title]) => `- ${cat}: ${title}`)
     .join('\n');
+
+  const chapterLines = buildChapterLines(row);
 
   return [
     'The Daily Roast Radio - satire broadcast.',
@@ -95,6 +175,13 @@ function buildDescription(row) {
     '',
     'Stories in this episode:',
     lines || '- mixed headlines',
+    ...(chapterLines.length > 0
+      ? [
+        '',
+        'Chapters:',
+        ...chapterLines
+      ]
+      : []),
     '',
     `Read more: ${SITE_URL}`,
     '',

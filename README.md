@@ -236,6 +236,8 @@ schedule:
 Radio broadcast generation + YouTube upload runs 3x daily from `.github/workflows/scheduled-broadcasts.yml`.
 Sunday marathon (3 shorter episodes + deep-dive segment) runs from `.github/workflows/sunday-marathon.yml`.
 
+YouTube uploads now auto-generate lightweight chapter markers from script structure and duration (no extra AI/API calls), improving retention and navigation.
+
 If `YT_PODCAST_PLAYLIST_ID` is set, each uploaded video is also added to that playlist.
 For YouTube Podcasts, create or mark the playlist as a Podcast in YouTube Studio first.
 

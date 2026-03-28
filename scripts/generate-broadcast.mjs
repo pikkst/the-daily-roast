@@ -1827,7 +1827,9 @@ async function main() {
   const articles = await fetchArticlesPerCategory(db, recentContext.usedArticleIds);
   const topicalMemoryLinks = await fetchTopicalMemoryLinks(db, articles, MEMORY_LOOKBACK_DAYS, MEMORY_MAX_LINKS);
   const topicalMemoryNotes = buildTopicalMemoryNotes(topicalMemoryLinks, MEMORY_LOOKBACK_DAYS);
-  const weeklyTopContext = await fetchWeeklyTopContext(db);
+  const weeklyTopContext = BROADCAST_FORMAT === 'sunday_special'
+    ? await fetchWeeklyTopContext(db)
+    : 'Weekly Top context skipped for daily mode (optimization).';
   const externalResearchNotes = ENABLE_EXTERNAL_RESEARCH
     ? await fetchExternalResearchNotes(articles, EXTERNAL_RESEARCH_MAX_ITEMS)
     : 'External research disabled for this run (API optimization mode).';
