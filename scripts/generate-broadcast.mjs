@@ -95,6 +95,11 @@ const DEFAULT_HOST_MEMORY_BANK = 'Recurring memories: the 2019 coffee-machine me
 const DEFAULT_TANGENT_STYLE_GUIDE = 'Allow short natural tangents that feel human: quick detours into personal memory, newsroom history, or historical analogy, then return smoothly to the story.';
 
 const PLATFORM_PROMO_BRIEF = normalizeMultilineEnv(process.env.PLATFORM_PROMO_BRIEF, DEFAULT_PLATFORM_PROMO_BRIEF);
+const PROMO_MODE = String(process.env.PROMO_MODE || 'platform').trim().toLowerCase();
+const PROMO_PARTNER_CHALLENGE = normalizeMultilineEnv(
+  process.env.PROMO_PARTNER_CHALLENGE,
+  'Partner challenge of the day: listeners complete a playful challenge and use code ROAST for tracking.'
+);
 const HOST_BIO_JOE = normalizeMultilineEnv(process.env.HOST_BIO_JOE, DEFAULT_HOST_BIO_JOE);
 const HOST_BIO_JANE = normalizeMultilineEnv(process.env.HOST_BIO_JANE, DEFAULT_HOST_BIO_JANE);
 const HOST_SHARED_HISTORY = normalizeMultilineEnv(process.env.HOST_SHARED_HISTORY, DEFAULT_HOST_SHARED_HISTORY);
@@ -718,6 +723,21 @@ function buildTopicalMemoryNotes(memoryLinks, daysBack = MEMORY_LOOKBACK_DAYS) {
   }).join('\n');
 }
 
+function buildWeeklySagaTheme(weeklyTopContext) {
+  const text = String(weeklyTopContext || '').trim();
+  if (!text || text.toLowerCase().includes('unavailable') || text.toLowerCase().includes('no weekly top')) {
+    return 'No weekly saga theme available. Keep continuity anchored to topical memory notes only.';
+  }
+
+  const match = text.match(/Top weekly headline:\s*(.+)/i);
+  const topHeadline = match?.[1]?.trim();
+  if (!topHeadline) {
+    return 'Weekly context exists, but no clear top headline. Keep callbacks light and broad.';
+  }
+
+  return `Nadala Absurd saga anchor: "${topHeadline}". Use at least one callback that frames today as the next chapter of this weekly absurd arc.`;
+}
+
 async function fetchWeeklyTopContext(db) {
   try {
     const { data: summaryRows, error: summaryErr } = await db
@@ -1066,6 +1086,11 @@ async function generateScript(
     `Target tangent count this episode: ${TARGET_TANGENTS_PER_EPISODE}`
   ].join('\n');
 
+  const weeklySagaTheme = buildWeeklySagaTheme(weeklyTopContext);
+  const promoBrief = PROMO_MODE === 'partner_challenge'
+    ? `PROMO MODE: partner_challenge\n${PROMO_PARTNER_CHALLENGE}`
+    : `PROMO MODE: platform\n${PLATFORM_PROMO_BRIEF}`;
+
   const isSundaySpecial = BROADCAST_FORMAT === 'sunday_special';
   const formatBlock = isSundaySpecial
     ? `SUNDAY SPECIAL MODE:
@@ -1102,7 +1127,10 @@ HOST PERSONALITY + BACKSTORY (MANDATORY CONTINUITY INPUT):
 ${hostPersonaBrief}
 
 PLATFORM PROMO BRIEF (MANDATORY MID-SHOW SLOT):
-${PLATFORM_PROMO_BRIEF}
+${promoBrief}
+
+WEEKLY SAGA THEME (SERIAL CONTINUITY):
+${weeklySagaTheme}
 
 CURRENT EDITION:
 - ${edition.label} (${edition.nominalTime} Tallinn time)
@@ -1127,6 +1155,8 @@ WRITE A COMPLETE RADIO SHOW SCRIPT covering ALL ${articles.length} stories. The 
 
 ${SUNDAY_DEEP_DIVE ? '6. **REALITY CHECK MOMENT** — Include one concise compare/contrast beat for a top story:\n   - what happened in real reporting context\n   - what absurd exaggeration the roast adds\n   - why the contrast is funny and revealing' : ''}
 
+${PROMO_MODE === 'partner_challenge' ? 'PROMO CTA RULE: in station break, include a measurable partner CTA (challenge name or short code).' : ''}
+
 LENGTH BUDGET (MANDATORY):
 - Cold open: 4-6 lines
 - Intro: 8-10 lines
@@ -1143,6 +1173,7 @@ CONTENT QUALITY RULES (VERY IMPORTANT):
 - Vary pacing: quick jab -> analysis beat -> callback -> stronger punchline.
 - If a topical memory link is provided for a story, include one explicit continuity callback (what changed since earlier coverage).
 - If weekly context is provided, include at least one callback to a weekly top story.
+- Treat each episode as part of an ongoing weekly narrative arc, not a disconnected standalone.
 
 COMEDY STYLE:
 - Deadpan absurdity (treat insane things as normal)

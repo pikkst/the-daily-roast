@@ -63,6 +63,7 @@
     els.articlesSection = document.getElementById('radio-articles-section');
     els.articlesGrid = document.getElementById('radio-articles-grid');
     els.nextCountdown = document.getElementById('radio-next-countdown');
+    els.launchTeaser = document.getElementById('radio-launch-teaser');
     els.pipelineStatus = document.getElementById('radio-pipeline-status');
     els.downloadBtn = document.getElementById('radio-download-btn');
     els.archiveSection = document.getElementById('radio-archive-section');
@@ -552,6 +553,27 @@
     els.nextCountdown.textContent = `Next broadcast in ${hh}:${mm}:${ss}`;
     els.pipelineStatus.textContent = getPipelineLabel(nowTallinn);
     els.pipelineStatus.classList.toggle('radio-pipeline-status--generating', els.pipelineStatus.textContent === 'Generating now...');
+
+    if (els.launchTeaser) {
+      const slotLabel = `${String(nextSlot.getHours()).padStart(2, '0')}:00`;
+      const teaserCandidates = [
+        `Launch ritual loading: new roast drops around ${slotLabel}.`,
+        `Studio countdown live. Next roast window: ${slotLabel}.`,
+        `Heads up: the next absurd bulletin lands near ${slotLabel}.`
+      ];
+
+      const idx = nowTallinn.getMinutes() % teaserCandidates.length;
+      const baseTeaser = teaserCandidates[idx];
+      const isImminent = totalSeconds <= 10 * 60;
+
+      if (isImminent) {
+        els.launchTeaser.textContent = `⚡ ${baseTeaser} Teaser mode active.`;
+      } else {
+        els.launchTeaser.textContent = baseTeaser;
+      }
+
+      els.launchTeaser.classList.toggle('radio-launch-teaser--imminent', isImminent);
+    }
   }
 
   function startScheduleTicker() {

@@ -222,6 +222,8 @@ Cloudflare will automatically redeploy whenever you push to the `main` branch.
 | `PROMO_BUMPER_TRACK_AFTERNOON` | Optional slot-specific bumper override for afternoon edition | No |
 | `PROMO_BUMPER_TRACK_EVENING` | Optional slot-specific bumper override for evening edition | No |
 | `SUNDAY_PROMO_BUMPER_TRACK` | Sunday marathon default bumper file/URL (defaults to `sounds/dragon-studio-whoosh-cinematic-376875.mp3`) | No |
+| `PROMO_MODE` | Mid-roll mode: `platform` or `partner_challenge` | No |
+| `PROMO_PARTNER_CHALLENGE` | Partner challenge CTA text used when `PROMO_MODE=partner_challenge` | No |
 
 ### Adjusting Generation Schedule
 

@@ -84,13 +84,13 @@
         delete mapped.categories;
         renderArticle(mapped);
         trackView(slug);
-        loadRelated(mapped.category_id, mapped.id);
+        loadRelated(mapped.category_id, mapped.id, mapped.created_at);
         return;
       }
 
       renderArticle(data);
       trackView(slug);
-      loadRelated(data.category_id, data.id);
+      loadRelated(data.category_id, data.id, data.created_at);
     } catch (err) {
       console.error('Error loading article:', err);
       showNotFound();
@@ -384,7 +384,7 @@
     });
   }
 
-  async function loadRelated(categoryId, currentId) {
+  async function loadRelated(categoryId, currentId, currentCreatedAt) {
     const db = getSupabase();
     if (!db) return;
 
@@ -395,20 +395,76 @@
         .eq('category_id', categoryId)
         .neq('id', currentId)
         .order('created_at', { ascending: false })
-        .limit(3);
+        .limit(8);
 
       if (data && data.length > 0) {
+        const relatedArticles = data.slice(0, 3);
         const grid = document.getElementById('related-grid');
         const section = document.getElementById('related-section');
         
         if (grid && section) {
-          grid.innerHTML = data.map(article => renderRelatedCard(article)).join('');
+          grid.innerHTML = relatedArticles.map(article => renderRelatedCard(article)).join('');
           section.style.display = 'block';
         }
+
+        renderTopicTrail(data, currentCreatedAt);
       }
     } catch (err) {
       console.error('Error loading related:', err);
     }
+  }
+
+  function renderTopicTrail(candidates, currentCreatedAt) {
+    const section = document.getElementById('topic-trail-section');
+    const list = document.getElementById('topic-trail-list');
+    if (!section || !list) return;
+
+    const anchorTime = new Date(currentCreatedAt).getTime();
+    const now = Number.isFinite(anchorTime) ? anchorTime : Date.now();
+    const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
+
+    const filtered = (candidates || [])
+      .filter(item => {
+        const ts = new Date(item.created_at).getTime();
+        if (!Number.isFinite(ts)) return false;
+        return ts <= now && (now - ts) <= tenDaysMs;
+      })
+      .slice(0, 4);
+
+    if (filtered.length === 0) {
+      section.style.display = 'none';
+      return;
+    }
+
+    list.innerHTML = filtered.map(item => {
+      const label = getTrailLabel(item.created_at, now);
+      const safeLabel = escapeHtml(label);
+      const safeTitle = escapeHtml(item.title || 'Untitled roast');
+      const safeSlug = encodeURIComponent(item.slug || '');
+      return `<li><a href="/article?slug=${safeSlug}"><span class="topic-trail-chip">${safeLabel}</span><span class="topic-trail-link-title">${safeTitle}</span></a></li>`;
+    }).join('');
+
+    section.style.display = 'block';
+  }
+
+  function getTrailLabel(createdAt, anchorTime) {
+    const ts = new Date(createdAt).getTime();
+    if (!Number.isFinite(ts)) return 'Earlier';
+
+    const diffDays = Math.floor((anchorTime - ts) / (24 * 60 * 60 * 1000));
+    if (diffDays <= 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays <= 7) return `${diffDays} days ago`;
+    return 'Earlier';
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function renderRelatedCard(article) {

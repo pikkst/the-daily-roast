@@ -235,6 +235,7 @@
     const dailySummaryEl = document.getElementById('quiz-daily-summary');
     const shareBtn = document.getElementById('quiz-share');
     const downloadBtn = document.getElementById('quiz-download-card');
+    const radioCta = document.getElementById('quiz-radio-cta');
     const shareCardWrap = document.getElementById('quiz-share-card-wrap');
     const shareCardImg = document.getElementById('quiz-share-card-image');
     if (quizMode === MODE_DAILY) {
@@ -254,6 +255,11 @@
       bindShareButton(shareBtn, score, total, currentDayKey, dailyState.streak);
       bindDownloadCardButton(downloadBtn, currentDayKey);
       updateDailyStatusUI();
+      if (radioCta) {
+        radioCta.textContent = dailyState.streak >= 3
+          ? '📻 Keep Streak Alive: Listen Today\'s Radio'
+          : '📻 Listen Today\'s Radio';
+      }
     } else {
       dailySummaryEl.style.display = 'none';
       shareBtn.style.display = 'none';
@@ -261,6 +267,9 @@
       shareCardWrap.style.display = 'none';
       latestShareCardDataUrl = '';
       latestShareCardBlob = null;
+      if (radioCta) {
+        radioCta.textContent = '📻 Listen Today\'s Radio';
+      }
     }
 
     // Save score
