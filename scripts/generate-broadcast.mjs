@@ -55,6 +55,11 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const TALLINN_TIMEZONE = 'Europe/Tallinn';
 const POLTSAMAA = { name: 'Poltsamaa, Estonia', latitude: 58.6525, longitude: 25.9717 };
 const BROADCAST_SLOT = (process.env.BROADCAST_SLOT || '').trim().toLowerCase();
+const BROADCAST_FORMAT = (process.env.BROADCAST_FORMAT || 'daily').trim().toLowerCase();
+const SUNDAY_DEEP_DIVE = process.env.SUNDAY_DEEP_DIVE === '1';
+const ENABLE_EXTERNAL_RESEARCH = process.env.ENABLE_EXTERNAL_RESEARCH !== '0';
+const SKIP_COVER_IMAGE = process.env.SKIP_COVER_IMAGE === '1';
+const REUSE_RECENT_COVER = process.env.REUSE_RECENT_COVER === '1';
 const ENFORCE_TALLINN_SLOT_TIME = process.env.ENFORCE_TALLINN_SLOT_TIME === '1';
 const FORCE_REPLACE_EDITION = process.env.FORCE_REPLACE_EDITION === '1';
 const parsedBgmVolume = Number(process.env.BGM_VOLUME || '0.10');
@@ -101,6 +106,32 @@ const parsedMemoryMaxLinks = Number(process.env.MEMORY_MAX_LINKS || '8');
 const MEMORY_MAX_LINKS = Number.isFinite(parsedMemoryMaxLinks)
   ? Math.max(3, Math.min(20, Math.floor(parsedMemoryMaxLinks)))
   : 8;
+const parsedExternalResearchItems = Number(process.env.EXTERNAL_RESEARCH_MAX_ITEMS || '3');
+const EXTERNAL_RESEARCH_MAX_ITEMS = Number.isFinite(parsedExternalResearchItems)
+  ? Math.max(1, Math.min(6, Math.floor(parsedExternalResearchItems)))
+  : 3;
+const parsedScriptMinLines = Number(process.env.SCRIPT_MIN_LINES || '70');
+const SCRIPT_TARGET_MIN_LINES = Number.isFinite(parsedScriptMinLines)
+  ? Math.max(35, Math.min(160, Math.floor(parsedScriptMinLines)))
+  : 70;
+const parsedScriptMaxLines = Number(process.env.SCRIPT_MAX_LINES || '100');
+const SCRIPT_TARGET_MAX_LINES = Number.isFinite(parsedScriptMaxLines)
+  ? Math.max(SCRIPT_TARGET_MIN_LINES + 5, Math.min(220, Math.floor(parsedScriptMaxLines)))
+  : 100;
+const SCRIPT_MIN_HARD_FLOOR = Math.max(25, SCRIPT_TARGET_MIN_LINES - 20);
+const MIN_SCRIPT_LINES = Math.max(30, SCRIPT_TARGET_MIN_LINES - 5);
+const PROMO_BUMPER_TRACK = String(process.env.PROMO_BUMPER_TRACK || '').trim();
+const PROMO_BUMPER_TRACK_MORNING = String(process.env.PROMO_BUMPER_TRACK_MORNING || '').trim();
+const PROMO_BUMPER_TRACK_AFTERNOON = String(process.env.PROMO_BUMPER_TRACK_AFTERNOON || '').trim();
+const PROMO_BUMPER_TRACK_EVENING = String(process.env.PROMO_BUMPER_TRACK_EVENING || '').trim();
+const parsedPromoBumperSeconds = Number(process.env.PROMO_BUMPER_SECONDS || '1.2');
+const PROMO_BUMPER_SECONDS = Number.isFinite(parsedPromoBumperSeconds)
+  ? Math.max(0.4, Math.min(4, parsedPromoBumperSeconds))
+  : 1.2;
+const parsedPromoPauseSeconds = Number(process.env.PROMO_PAUSE_SECONDS || '0.7');
+const PROMO_PAUSE_SECONDS = Number.isFinite(parsedPromoPauseSeconds)
+  ? Math.max(0.2, Math.min(2.5, parsedPromoPauseSeconds))
+  : 0.7;
 
 function parseListEnv(value) {
   return String(value || '')
@@ -681,6 +712,85 @@ function buildTopicalMemoryNotes(memoryLinks, daysBack = MEMORY_LOOKBACK_DAYS) {
   }).join('\n');
 }
 
+async function fetchWeeklyTopContext(db) {
+  try {
+    const { data: summaryRows, error: summaryErr } = await db
+      .from('weekly_roast_summaries')
+      .select('id, week_key, week_start_date, week_end_date, top_article_title')
+      .order('generated_at', { ascending: false })
+      .limit(1);
+
+    if (summaryErr) throw summaryErr;
+    const summary = (summaryRows || [])[0];
+    if (!summary?.id) {
+      return 'No weekly Top 10 summary available yet.';
+    }
+
+    const { data: itemRows, error: itemsErr } = await db
+      .from('weekly_roast_items')
+      .select('rank, title, category_slug, views, absurdity_score')
+      .eq('summary_id', summary.id)
+      .order('rank', { ascending: true })
+      .limit(5);
+
+    if (itemsErr) throw itemsErr;
+
+    const lines = (itemRows || []).map((item) => {
+      return `#${item.rank} [${item.category_slug}] ${item.title} (views: ${item.views || 0}, absurdity: ${item.absurdity_score || 0})`;
+    });
+
+    return [
+      `Weekly window: ${summary.week_start_date} to ${summary.week_end_date}`,
+      `Top weekly headline: ${summary.top_article_title || 'n/a'}`,
+      ...(lines.length > 0 ? lines : ['No weekly items found.'])
+    ].join('\n');
+  } catch (err) {
+    console.warn(`  ⚠️  Could not load weekly top context: ${err.message}`);
+    return 'Weekly Top 10 context unavailable.';
+  }
+}
+
+async function fetchExternalResearchNotes(articles, maxItems = 3) {
+  const picked = (articles || []).slice(0, maxItems);
+  if (picked.length === 0) return 'No external research notes.';
+
+  const notes = [];
+
+  for (const article of picked) {
+    try {
+      const query = String(article?.title || '').split(' ').slice(0, 8).join(' ');
+      if (!query) continue;
+
+      const searchRes = await fetch(`https://en.wikipedia.org/w/rest.php/v1/search/title?q=${encodeURIComponent(query)}&limit=1`, {
+        signal: AbortSignal.timeout(8000)
+      });
+      if (!searchRes.ok) continue;
+
+      const searchJson = await searchRes.json();
+      const first = searchJson?.pages?.[0];
+      if (!first?.key) continue;
+
+      const summaryRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(first.key)}`, {
+        signal: AbortSignal.timeout(8000)
+      });
+      if (!summaryRes.ok) continue;
+
+      const summaryJson = await summaryRes.json();
+      const extract = String(summaryJson?.extract || '').replace(/\s+/g, ' ').trim();
+      if (!extract) continue;
+
+      notes.push(`For "${article.title}": ${extract.slice(0, 240)}...`);
+    } catch {
+      // Keep best-effort behavior; external lookups are optional.
+    }
+  }
+
+  if (notes.length === 0) {
+    return 'No external research notes (fallback to article context only).';
+  }
+  return notes.join('\n');
+}
+
 function getTallinnDateKey(dateInput = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: TALLINN_TIMEZONE,
@@ -767,11 +877,6 @@ async function fetchArticlesPerCategory(db, usedArticleIds = new Set()) {
   return articles;
 }
 
-const MIN_SCRIPT_LINES = 65;
-const TARGET_SCRIPT_MIN_LINES = 70;
-const TARGET_SCRIPT_MAX_LINES = 100;
-const MIN_SCRIPT_LINES_HARD_FLOOR = 45;
-
 function normalizeSpeakerName(rawSpeaker) {
   const normalized = String(rawSpeaker || '')
     .trim()
@@ -848,7 +953,7 @@ async function expandScriptToMinimum(script, edition, retries = 1) {
   const prompt = `You are revising a two-host comedy radio script.
 
 Current script has ${currentLines} lines, but it must be at least ${MIN_SCRIPT_LINES} lines.
-Expand it to 70-95 lines while preserving story order, clarity, and humor.
+Expand it to ${SCRIPT_TARGET_MIN_LINES}-${SCRIPT_TARGET_MAX_LINES} lines while preserving story order, clarity, and humor.
 
 Rules:
 - Keep only two speakers: Joe and Jane.
@@ -930,7 +1035,16 @@ ${serialized}`;
 
 // ---------- Step 2: Generate Comedy Script ----------
 
-async function generateScript(articles, liveNotice, continuityNotes, topicalMemoryNotes, edition, retries = 2) {
+async function generateScript(
+  articles,
+  liveNotice,
+  continuityNotes,
+  topicalMemoryNotes,
+  weeklyTopContext,
+  externalResearchNotes,
+  edition,
+  retries = 2
+) {
   console.log('🎙️  Generating comedy radio script...\n');
 
   const articleSummaries = articles.map(a =>
@@ -946,6 +1060,15 @@ async function generateScript(articles, liveNotice, continuityNotes, topicalMemo
     `Target tangent count this episode: ${TARGET_TANGENTS_PER_EPISODE}`
   ].join('\n');
 
+  const isSundaySpecial = BROADCAST_FORMAT === 'sunday_special';
+  const formatBlock = isSundaySpecial
+    ? `SUNDAY SPECIAL MODE:
+- This episode is part of a Sunday multi-episode marathon.
+- Keep pacing tighter than weekday episodes and prioritize high-information comedy.
+- Weave in weekly callbacks from the WEEKLY TOP CONTEXT section.
+${SUNDAY_DEEP_DIVE ? '- Deep-dive required: include one "REALITY CHECK" comparison where hosts contrast the real-world context vs the parody angle for a top story.' : ''}`
+    : 'STANDARD DAILY MODE: Use normal daily edition pacing and structure.';
+
   const prompt = `You are the head writer for "The Daily Roast Radio" — a sharp, story-first comedy news podcast hosted by two anchors:
 
 **Joe** — The dry, sarcastic anchor. Deadpan delivery, world-weary cynicism, loves a good pun. Think a mix of Jon Stewart's wit and Ron Burgundy's unearned confidence.
@@ -959,6 +1082,15 @@ ${continuityNotes}
 
 TOPICAL MEMORY LINKS (last ${MEMORY_LOOKBACK_DAYS} days):
 ${topicalMemoryNotes}
+
+WEEKLY TOP CONTEXT:
+${weeklyTopContext}
+
+EXTERNAL RESEARCH NOTES (best effort web context):
+${externalResearchNotes}
+
+FORMAT MODE:
+${formatBlock}
 
 HOST PERSONALITY + BACKSTORY (MANDATORY CONTINUITY INPUT):
 ${hostPersonaBrief}
@@ -987,13 +1119,15 @@ WRITE A COMPLETE RADIO SHOW SCRIPT covering ALL ${articles.length} stories. The 
   - Make it sound naturally in-character for Joe and Jane.
 5. **WRAP-UP** — Final banter, use the edition-specific signoff instruction above
 
+${SUNDAY_DEEP_DIVE ? '6. **REALITY CHECK MOMENT** — Include one concise compare/contrast beat for a top story:\n   - what happened in real reporting context\n   - what absurd exaggeration the roast adds\n   - why the contrast is funny and revealing' : ''}
+
 LENGTH BUDGET (MANDATORY):
 - Cold open: 4-6 lines
 - Intro: 8-10 lines
 - Each story segment: 8-10 lines
 - Wrap-up: 6-8 lines
-- Total: ${TARGET_SCRIPT_MIN_LINES}-${TARGET_SCRIPT_MAX_LINES} lines
-- If first draft is shorter than ${TARGET_SCRIPT_MIN_LINES}, continue adding lines until it reaches at least ${TARGET_SCRIPT_MIN_LINES}.
+- Total: ${SCRIPT_TARGET_MIN_LINES}-${SCRIPT_TARGET_MAX_LINES} lines
+- If first draft is shorter than ${SCRIPT_TARGET_MIN_LINES}, continue adding lines until it reaches at least ${SCRIPT_TARGET_MIN_LINES}.
 
 CONTENT QUALITY RULES (VERY IMPORTANT):
 - Be specific to each provided story; avoid generic commentary that could fit any headline.
@@ -1002,6 +1136,7 @@ CONTENT QUALITY RULES (VERY IMPORTANT):
 - Use one perspective shift per story (citizen angle, business angle, policy angle, culture angle, or global angle).
 - Vary pacing: quick jab -> analysis beat -> callback -> stronger punchline.
 - If a topical memory link is provided for a story, include one explicit continuity callback (what changed since earlier coverage).
+- If weekly context is provided, include at least one callback to a weekly top story.
 
 COMEDY STYLE:
 - Deadpan absurdity (treat insane things as normal)
@@ -1055,7 +1190,7 @@ Return ONLY valid JSON:
   "line_count": 78
 }
 
-The script should have ${TARGET_SCRIPT_MIN_LINES}-${TARGET_SCRIPT_MAX_LINES} lines total (~15 minutes of audio).
+The script should have ${SCRIPT_TARGET_MIN_LINES}-${SCRIPT_TARGET_MAX_LINES} lines total (~15 minutes of audio).
 Target ratio: ~65% meaningful story substance, ~35% humor and punchlines.
 Every line must either add information, escalate a joke, or move the segment forward. No filler, no dead air.`;
 
@@ -1116,8 +1251,8 @@ Every line must either add information, escalate a joke, or move the segment for
         data.script = await expandScriptToMinimum(data.script, edition);
       }
 
-      if (data.script.length < MIN_SCRIPT_LINES_HARD_FLOOR) {
-        throw new Error(`Script too short after expansion: ${data.script.length} lines (hard floor ${MIN_SCRIPT_LINES_HARD_FLOOR})`);
+      if (data.script.length < SCRIPT_MIN_HARD_FLOOR) {
+        throw new Error(`Script too short after expansion: ${data.script.length} lines (hard floor ${SCRIPT_MIN_HARD_FLOOR})`);
       }
 
       if (data.script.length < MIN_SCRIPT_LINES) {
@@ -1152,6 +1287,13 @@ Every line must either add information, escalate a joke, or move the segment for
 async function generateAudio(script, retries = 2) {
   console.log('\n🔊 Generating TTS audio...\n');
 
+  function getPromoBumperTrackForRun() {
+    if (BROADCAST_SLOT === 'morning' && PROMO_BUMPER_TRACK_MORNING) return PROMO_BUMPER_TRACK_MORNING;
+    if (BROADCAST_SLOT === 'afternoon' && PROMO_BUMPER_TRACK_AFTERNOON) return PROMO_BUMPER_TRACK_AFTERNOON;
+    if (BROADCAST_SLOT === 'evening' && PROMO_BUMPER_TRACK_EVENING) return PROMO_BUMPER_TRACK_EVENING;
+    return PROMO_BUMPER_TRACK;
+  }
+
   const ttsPrompt = `TTS the following conversation between Joe and Jane:\n` +
     script.map(line => `${line.speaker}: ${line.text}`).join('\n');
 
@@ -1169,6 +1311,126 @@ async function generateAudio(script, retries = 2) {
 
   function parsePcmAudioBase64(response) {
     return response?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+  }
+
+  function findPromoSegment(lines) {
+    const promoStart = (lines || []).findIndex((line) => {
+      const text = String(line?.text || '').toLowerCase();
+      return text.includes('station break') || text.includes('sponsor') || text.includes('quick break');
+    });
+
+    if (promoStart === -1) return null;
+
+    // Most promo sections are 2-4 lines. Keep a compact block.
+    const promoEnd = Math.min(lines.length - 1, promoStart + 3);
+    return { promoStart, promoEnd };
+  }
+
+  function createSilenceWavBuffer(seconds, sampleRate = 24000) {
+    const clamped = Math.max(0, Number(seconds) || 0);
+    const sampleCount = Math.floor(sampleRate * clamped);
+    const pcmData = Buffer.alloc(sampleCount * 2, 0);
+
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+    const blockAlign = (numChannels * bitsPerSample) / 8;
+    const dataSize = pcmData.length;
+    const chunkSize = 36 + dataSize;
+
+    const header = Buffer.alloc(44);
+    header.write('RIFF', 0);
+    header.writeUInt32LE(chunkSize, 4);
+    header.write('WAVE', 8);
+    header.write('fmt ', 12);
+    header.writeUInt32LE(16, 16);
+    header.writeUInt16LE(1, 20);
+    header.writeUInt16LE(numChannels, 22);
+    header.writeUInt32LE(sampleRate, 24);
+    header.writeUInt32LE(byteRate, 28);
+    header.writeUInt16LE(blockAlign, 32);
+    header.writeUInt16LE(bitsPerSample, 34);
+    header.write('data', 36);
+    header.writeUInt32LE(dataSize, 40);
+
+    return Buffer.concat([header, pcmData]);
+  }
+
+  async function loadPromoBumperWavBuffer() {
+    const selectedTrack = getPromoBumperTrackForRun();
+    if (!selectedTrack) return null;
+
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'daily-roast-bumper-'));
+    const inputPath = path.join(tmpDir, `bumper-src${getTrackExtension(selectedTrack)}`);
+    const outputPath = path.join(tmpDir, 'bumper.wav');
+
+    try {
+      if (isHttpUrl(selectedTrack)) {
+        const data = await fetchBinary(selectedTrack);
+        fs.writeFileSync(inputPath, data);
+      } else {
+        const resolved = path.isAbsolute(selectedTrack)
+          ? selectedTrack
+          : path.resolve(process.cwd(), selectedTrack);
+        if (!fs.existsSync(resolved)) {
+          throw new Error(`PROMO_BUMPER_TRACK not found: ${resolved}`);
+        }
+        fs.copyFileSync(resolved, inputPath);
+      }
+
+      await runCommand('ffmpeg', [
+        '-y',
+        '-i', inputPath,
+        '-t', String(PROMO_BUMPER_SECONDS),
+        '-ar', '24000',
+        '-ac', '1',
+        '-c:a', 'pcm_s16le',
+        outputPath
+      ]);
+
+      return fs.readFileSync(outputPath);
+    } catch (err) {
+      console.warn(`  ⚠️  Promo bumper load failed: ${err.message}`);
+      return null;
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  }
+
+  async function generateAudioWithPromoBreaks() {
+    const promoSegment = findPromoSegment(script);
+    if (!promoSegment) return null;
+
+    const before = script.slice(0, promoSegment.promoStart);
+    const promo = script.slice(promoSegment.promoStart, promoSegment.promoEnd + 1);
+    const after = script.slice(promoSegment.promoEnd + 1);
+
+    if (before.length === 0 || promo.length === 0 || after.length === 0) {
+      return null;
+    }
+
+    console.log('  🎚️  Promo segment detected; generating pre/promo/post with pauses.');
+
+    const beforeWav = await generateChunkAudio(before);
+    await sleep(800);
+    const promoWav = await generateChunkAudio(promo);
+    await sleep(800);
+    const afterWav = await generateChunkAudio(after);
+
+    const pauseWav = createSilenceWavBuffer(PROMO_PAUSE_SECONDS, 24000);
+    const bumperWav = await loadPromoBumperWavBuffer();
+
+    const blocks = [beforeWav, pauseWav];
+    if (bumperWav) blocks.push(bumperWav, pauseWav);
+    blocks.push(promoWav, pauseWav);
+    if (bumperWav) blocks.push(bumperWav, pauseWav);
+    blocks.push(afterWav);
+
+    const merged = mergeWavBuffers(blocks, 24000);
+    const durationSeconds = Math.round(merged.length / (24000 * 2));
+
+    console.log('  ✅ Promo pauses inserted (script -> pause -> promo -> pause -> script).');
+    return { wavBuffer: merged, durationSeconds };
   }
 
   async function generateChunkAudio(chunkLines) {
@@ -1226,6 +1488,11 @@ async function generateAudio(script, retries = 2) {
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
+      const promoStructured = await generateAudioWithPromoBreaks();
+      if (promoStructured) {
+        return promoStructured;
+      }
+
       const response = await genai.models.generateContent({
         model: 'gemini-2.5-flash-preview-tts',
         contents: [{ parts: [{ text: ttsPrompt }] }],
@@ -1448,6 +1715,25 @@ async function uploadCoverImage(db, imageData) {
   }
 }
 
+async function fetchLatestCoverImageUrl(db) {
+  try {
+    const { data, error } = await db
+      .from('broadcasts')
+      .select('cover_image_url, created_at')
+      .eq('published', true)
+      .not('cover_image_url', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data?.cover_image_url || null;
+  } catch (err) {
+    console.warn(`  ⚠️  Could not reuse recent cover image: ${err.message}`);
+    return null;
+  }
+}
+
 // ---------- Step 6: Save Broadcast to Database ----------
 
 async function saveBroadcast(db, { title, script, audioUrl, coverImageUrl, bgmTheme, articles, durationSeconds }) {
@@ -1493,6 +1779,8 @@ async function main() {
   console.log('  THE DAILY ROAST RADIO — Broadcast Generator');
   console.log('📻📻📻📻📻📻📻📻📻📻📻📻📻📻📻📻📻📻📻📻');
   console.log(`\n📅 ${new Date().toISOString()}\n`);
+  console.log(`🎛️  Format: ${BROADCAST_FORMAT}${SUNDAY_DEEP_DIVE ? ' (deep-dive)' : ''}`);
+  console.log(`🧮 Script budget: ${SCRIPT_TARGET_MIN_LINES}-${SCRIPT_TARGET_MAX_LINES} lines`);
 
   if (ENFORCE_TALLINN_SLOT_TIME && !BROADCAST_SLOT && !shouldRunScheduledBroadcast()) {
     const tallinnNow = getTallinnNow();
@@ -1532,6 +1820,10 @@ async function main() {
   const articles = await fetchArticlesPerCategory(db, recentContext.usedArticleIds);
   const topicalMemoryLinks = await fetchTopicalMemoryLinks(db, articles, MEMORY_LOOKBACK_DAYS, MEMORY_MAX_LINKS);
   const topicalMemoryNotes = buildTopicalMemoryNotes(topicalMemoryLinks, MEMORY_LOOKBACK_DAYS);
+  const weeklyTopContext = await fetchWeeklyTopContext(db);
+  const externalResearchNotes = ENABLE_EXTERNAL_RESEARCH
+    ? await fetchExternalResearchNotes(articles, EXTERNAL_RESEARCH_MAX_ITEMS)
+    : 'External research disabled for this run (API optimization mode).';
 
   if (articles.length < 3) {
     console.error(`❌ Not enough articles (${articles.length}). Need at least 3 categories. Exiting.`);
@@ -1543,7 +1835,15 @@ async function main() {
   const liveNotice = await fetchPoltsamaaWeather();
   console.log(`🌦️  Live notice: ${liveNotice.localDate}, ${liveNotice.localTime} (${TALLINN_TIMEZONE}) — ${liveNotice.summary}`);
   console.log(`🕒 Edition: ${edition.label} (${edition.nominalTime} Tallinn)`);
-  const scriptData = await generateScript(articles, liveNotice, continuityNotes, topicalMemoryNotes, edition);
+  const scriptData = await generateScript(
+    articles,
+    liveNotice,
+    continuityNotes,
+    topicalMemoryNotes,
+    weeklyTopContext,
+    externalResearchNotes,
+    edition
+  );
 
   if (!scriptData) {
     console.error('❌ Script generation failed. Exiting.');
@@ -1587,8 +1887,25 @@ async function main() {
 
   const imageData = await generateCoverImage(articles);
   let coverImageUrl = null;
-  if (imageData) {
-    coverImageUrl = await uploadCoverImage(db, imageData);
+  if (SKIP_COVER_IMAGE) {
+    console.log('🖼️  Cover generation skipped (SKIP_COVER_IMAGE=1).');
+    if (REUSE_RECENT_COVER) {
+      coverImageUrl = await fetchLatestCoverImageUrl(db);
+      if (coverImageUrl) {
+        console.log('  ♻️  Reusing latest cover image URL.');
+      }
+    }
+  } else {
+    const imageData = await generateCoverImage(articles);
+    if (imageData) {
+      coverImageUrl = await uploadCoverImage(db, imageData);
+    }
+    if (!coverImageUrl && REUSE_RECENT_COVER) {
+      coverImageUrl = await fetchLatestCoverImageUrl(db);
+      if (coverImageUrl) {
+        console.log('  ♻️  Cover generation fallback: reused latest cover image URL.');
+      }
+    }
   }
 
   // Step 5: Save broadcast
@@ -1602,7 +1919,10 @@ async function main() {
     day: 'numeric',
     year: 'numeric'
   });
-  const title = `The Daily Roast Radio — ${today.format(new Date())} · ${edition.label}`;
+  const titlePrefix = BROADCAST_FORMAT === 'sunday_special'
+    ? 'The Daily Roast Sunday Special'
+    : 'The Daily Roast Radio';
+  const title = `${titlePrefix} — ${today.format(new Date())} · ${edition.label}`;
 
   const broadcast = await saveBroadcast(db, {
     title,

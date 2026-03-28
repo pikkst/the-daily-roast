@@ -46,6 +46,7 @@ jobs:
         run: |
           tallinn_hh="$(TZ=Europe/Tallinn date +%H)"
           tallinn_hhmm="$(TZ=Europe/Tallinn date +%H:%M)"
+          tallinn_dow="$(TZ=Europe/Tallinn date +%u)"
           tallinn_offset="$(TZ=Europe/Tallinn date +%z)"
           triggered_cron="${{ github.event.schedule || '' }}"
           input_slot="${{ github.event.inputs.broadcast_slot || 'auto' }}"
@@ -64,6 +65,15 @@ jobs:
             echo "should_run=true" >> "$GITHUB_OUTPUT"
             echo "broadcast_slot=$slot" >> "$GITHUB_OUTPUT"
             echo "🧪 Manual run: slot gate bypassed, slot=$slot (current: $tallinn_hhmm)"
+            exit 0
+          fi
+
+          # Sunday is reserved for the dedicated marathon workflow.
+          # Skip scheduled daily slots entirely on Sunday (Tallinn time).
+          if [ "$tallinn_dow" = "7" ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "broadcast_slot=" >> "$GITHUB_OUTPUT"
+            echo "⏭️ Sunday detected in Tallinn ($tallinn_hhmm); skipping daily scheduled broadcast workflow"
             exit 0
           fi
 
@@ -143,6 +153,21 @@ jobs:
           BGM_TRACK_CHILL: ${{ vars.BGM_TRACK_CHILL || '' }}
           BGM_TRACK_FUNKY: ${{ vars.BGM_TRACK_FUNKY || '' }}
           BGM_TRACK_DRAMATIC: ${{ vars.BGM_TRACK_DRAMATIC || '' }}
+          PLATFORM_PROMO_BRIEF: ${{ secrets.PLATFORM_PROMO_BRIEF || vars.PLATFORM_PROMO_BRIEF || '' }}
+          HOST_BIO_JOE: ${{ secrets.HOST_BIO_JOE || vars.HOST_BIO_JOE || '' }}
+          HOST_BIO_JANE: ${{ secrets.HOST_BIO_JANE || vars.HOST_BIO_JANE || '' }}
+          HOST_SHARED_HISTORY: ${{ secrets.HOST_SHARED_HISTORY || vars.HOST_SHARED_HISTORY || '' }}
+          HOST_MEMORY_BANK: ${{ secrets.HOST_MEMORY_BANK || vars.HOST_MEMORY_BANK || '' }}
+          TANGENT_STYLE_GUIDE: ${{ secrets.TANGENT_STYLE_GUIDE || vars.TANGENT_STYLE_GUIDE || '' }}
+          TARGET_TANGENTS_PER_EPISODE: ${{ secrets.TARGET_TANGENTS_PER_EPISODE || vars.TARGET_TANGENTS_PER_EPISODE || '3' }}
+          MEMORY_LOOKBACK_DAYS: ${{ secrets.MEMORY_LOOKBACK_DAYS || vars.MEMORY_LOOKBACK_DAYS || '14' }}
+          MEMORY_MAX_LINKS: ${{ secrets.MEMORY_MAX_LINKS || vars.MEMORY_MAX_LINKS || '8' }}
+          PROMO_BUMPER_TRACK: ${{ vars.PROMO_BUMPER_TRACK || '' }}
+          PROMO_BUMPER_TRACK_MORNING: ${{ vars.PROMO_BUMPER_TRACK_MORNING || '' }}
+          PROMO_BUMPER_TRACK_AFTERNOON: ${{ vars.PROMO_BUMPER_TRACK_AFTERNOON || '' }}
+          PROMO_BUMPER_TRACK_EVENING: ${{ vars.PROMO_BUMPER_TRACK_EVENING || '' }}
+          PROMO_BUMPER_SECONDS: ${{ vars.PROMO_BUMPER_SECONDS || '1.0' }}
+          PROMO_PAUSE_SECONDS: ${{ vars.PROMO_PAUSE_SECONDS || '0.8' }}
         run: |
           echo "📻 Generating scheduled broadcast..."
           echo "🕒 Slot: $BROADCAST_SLOT"

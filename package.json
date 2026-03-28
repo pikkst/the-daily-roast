@@ -6,6 +6,7 @@
   "scripts": {
     "generate": "node scripts/generate-articles.mjs",
     "broadcast": "node scripts/generate-broadcast.mjs",
+    "broadcast:sunday": "node scripts/run-sunday-marathon.mjs",
     "youtube-upload": "node scripts/upload-latest-broadcast-youtube.mjs",
     "lock-roast": "node scripts/lock-roast-of-the-day.mjs",
     "weekly-top10": "node scripts/generate-weekly-top10.mjs",

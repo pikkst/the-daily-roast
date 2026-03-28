@@ -208,6 +208,18 @@ Cloudflare will automatically redeploy whenever you push to the `main` branch.
 | `TARGET_TANGENTS_PER_EPISODE` | Approx number of short tangents per episode (default: `3`, range: `1-6`) | No |
 | `MEMORY_LOOKBACK_DAYS` | How far back to search previous broadcasts for topical continuity links (default: `14`) | No |
 | `MEMORY_MAX_LINKS` | Maximum continuity links injected into prompt (default: `8`) | No |
+| `BROADCAST_FORMAT` | Broadcast mode (`daily` or `sunday_special`) | No |
+| `SUNDAY_DEEP_DIVE` | Enables deep-dive compare mode (`1`) for Sunday special episodes | No |
+| `SCRIPT_MIN_LINES` | Lower script length target override for custom formats | No |
+| `SCRIPT_MAX_LINES` | Upper script length target override for custom formats | No |
+| `SUNDAY_UPLOAD_YOUTUBE` | For marathon orchestrator: upload each generated episode (`1`/`0`) | No |
+| `PROMO_PAUSE_SECONDS` | Silence inserted around promo segment when merging audio parts (default: `0.7`) | No |
+| `PROMO_BUMPER_TRACK` | Optional audio file/URL used as a short jingle between merged script segments | No |
+| `PROMO_BUMPER_SECONDS` | Max bumper clip duration used from `PROMO_BUMPER_TRACK` (default: `1.2`) | No |
+| `PROMO_BUMPER_TRACK_MORNING` | Optional slot-specific bumper override for morning edition | No |
+| `PROMO_BUMPER_TRACK_AFTERNOON` | Optional slot-specific bumper override for afternoon edition | No |
+| `PROMO_BUMPER_TRACK_EVENING` | Optional slot-specific bumper override for evening edition | No |
+| `SUNDAY_PROMO_BUMPER_TRACK` | Sunday marathon default bumper file/URL (defaults to `sounds/dragon-studio-whoosh-cinematic-376875.mp3`) | No |
 
 ### Adjusting Generation Schedule
 
@@ -220,6 +232,7 @@ schedule:
 ```
 
 Radio broadcast generation + YouTube upload runs 3x daily from `.github/workflows/scheduled-broadcasts.yml`.
+Sunday marathon (3 shorter episodes + deep-dive segment) runs from `.github/workflows/sunday-marathon.yml`.
 
 If `YT_PODCAST_PLAYLIST_ID` is set, each uploaded video is also added to that playlist.
 For YouTube Podcasts, create or mark the playlist as a Podcast in YouTube Studio first.
@@ -252,6 +265,12 @@ Weekly Top 10 generation runs from `.github/workflows/weekly-top10.yml`.
 
 If you want to upload without generating a new broadcast (to avoid duplicate website posts), use:
 - `.github/workflows/youtube-upload-only.yml`
+
+To run Sunday marathon locally:
+
+```bash
+npm run broadcast:sunday
+```
 
 ### Manual Article Generation
 
