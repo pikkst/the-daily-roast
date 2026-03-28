@@ -47,6 +47,9 @@
     els.categories  = document.getElementById('radio-categories');
     els.weeklySaga  = document.getElementById('radio-weekly-saga');
     els.weeklySagaText = document.getElementById('radio-weekly-saga-text');
+    els.intensiveBar  = document.getElementById('radio-intensive-bar');
+    els.intensiveCount = document.getElementById('radio-intensive-count');
+    els.intensiveCats  = document.getElementById('radio-intensive-cats');
     els.playerSection = document.getElementById('radio-player-section');
     els.playBtn     = document.getElementById('radio-play-btn');
     els.playIcon    = document.getElementById('play-icon');
@@ -120,6 +123,7 @@
       renderBroadcast();
       renderBroadcastArchive();
       loadWeeklySaga(db);
+      loadIntensiveLeaderboard(db);
       startScheduleTicker();
     } catch (err) {
       console.error('Error loading broadcast:', err);
@@ -156,7 +160,62 @@
   // ── Weekly Saga Banner ──
 
   async function loadWeeklySaga(db) {
-    if (!db || !els.weeklySaga || !els.weeklySagaText) return;
+  // ── Intensive Day Leaderboard ──
+
+  async function loadIntensiveLeaderboard(db) {
+    if (!db || !els.intensiveBar) return;
+    try {
+      // Tallinn midnight ISO string
+      const now = new Date();
+      const tallinnOffset = new Intl.DateTimeFormat('en', { timeZone: 'Europe/Tallinn', timeZoneName: 'shortOffset' })
+        .formatToParts(now).find(p => p.type === 'timeZoneName')?.value || 'GMT+3';
+      const offsetMatch = tallinnOffset.match(/([+-])(\d+)/);
+      const offsetHours = offsetMatch ? parseInt(offsetMatch[1] + offsetMatch[2]) : 3;
+      const midnight = new Date(now);
+      midnight.setUTCHours(midnight.getUTCHours() - offsetHours);
+      midnight.setUTCHours(0, 0, 0, 0);
+      midnight.setUTCHours(midnight.getUTCHours() + offsetHours);
+
+      const { data, error } = await db
+        .from('broadcasts')
+        .select('title, category_summary, created_at')
+        .eq('published', true)
+        .gte('created_at', midnight.toISOString())
+        .order('created_at', { ascending: true });
+
+      if (error || !data || data.length <= 3) return;
+
+      // Tally category appearances
+      const catCounts = {};
+      for (const b of data) {
+        const cats = b.category_summary || {};
+        for (const cat of Object.keys(cats)) {
+          catCounts[cat] = (catCounts[cat] || 0) + 1;
+        }
+      }
+
+      const topCats = Object.entries(catCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4);
+
+      const catIcons = {
+        politics: '🏗️', technology: '💻', business: '💼',
+        science: '🔬', entertainment: '🎬', sports: '⚽', world: '🌍'
+      };
+
+      if (els.intensiveCount) {
+        els.intensiveCount.textContent = `${data.length} episodes today`;
+      }
+      if (els.intensiveCats) {
+        els.intensiveCats.innerHTML = topCats
+          .map(([cat, count]) => `<span class="radio-intensive-cat">${catIcons[cat] || '📰'} ${cat} ×${count}</span>`)
+          .join('');
+      }
+      els.intensiveBar.style.display = 'flex';
+    } catch (_) {
+      // Non-critical
+    }
+  }    if (!db || !els.weeklySaga || !els.weeklySagaText) return;
     try {
       const { data: summaries } = await db
         .from('weekly_roast_summaries')

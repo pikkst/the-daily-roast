@@ -3386,6 +3386,51 @@ button {
   line-height: 1.35;
 }
 
+/* Intensive Day Leaderboard Bar */
+.radio-intensive-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  margin: 6px 0 4px;
+  background: rgba(255, 59, 59, 0.1);
+  border: 1px solid rgba(255, 80, 80, 0.3);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  flex-wrap: wrap;
+}
+.radio-intensive-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #ff4444;
+  white-space: nowrap;
+  animation: intensive-pulse 1.8s ease-in-out infinite;
+}
+@keyframes intensive-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.radio-intensive-count {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.55);
+  white-space: nowrap;
+}
+.radio-intensive-cats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.radio-intensive-cat {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 20px;
+  color: rgba(255,255,255,0.75);
+  text-transform: capitalize;
+}
+
 .radio-cat-icon {
   font-size: 0.85rem;
 }

@@ -455,6 +455,19 @@ function getBroadcastEditionContext(now = new Date()) {
       styleCue: 'end-of-day wrap-up briefing'
     };
   }
+  // Intensive day mode: flash-1, flash-2, ... flash-N
+  if (BROADCAST_SLOT && BROADCAST_SLOT.startsWith('flash-')) {
+    const num = BROADCAST_SLOT.replace('flash-', '');
+    const tallinnNow = getTallinnNow(now);
+    const hh = String(tallinnNow.getHours()).padStart(2, '0');
+    const mm = String(tallinnNow.getMinutes()).padStart(2, '0');
+    return {
+      key: BROADCAST_SLOT,
+      label: `Flash Edition #${num}`,
+      nominalTime: `${hh}:${mm}`,
+      styleCue: 'urgent breaking-news flash bulletin — fast, punchy, no padding'
+    };
+  }
 
   const tallinnNow = getTallinnNow(now);
   const hour = tallinnNow.getHours();
@@ -2126,7 +2139,9 @@ async function main() {
   });
   const titlePrefix = BROADCAST_FORMAT === 'sunday_special'
     ? 'The Daily Roast Sunday Special'
-    : 'The Daily Roast Radio';
+    : BROADCAST_FORMAT === 'flash'
+      ? '⚡ Daily Roast Flash'
+      : 'The Daily Roast Radio';
   const title = `${titlePrefix} — ${today.format(new Date())} · ${edition.label}`;
 
   const broadcast = await saveBroadcast(db, {
