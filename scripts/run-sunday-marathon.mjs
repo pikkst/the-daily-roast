@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 
 const SUNDAY_UPLOAD_YOUTUBE = process.env.SUNDAY_UPLOAD_YOUTUBE === '1';
 const FORCE_REPLACE_EDITION = process.env.FORCE_REPLACE_EDITION === '1';
+const RUN_WEEKLY_TOP10_BEFORE_MARATHON = process.env.RUN_WEEKLY_TOP10_BEFORE_MARATHON !== '0';
 const DEFAULT_SUNDAY_BUMPER = 'sounds/dragon-studio-whoosh-cinematic-376875.mp3';
 const SUNDAY_PROMO_BUMPER_TRACK = (process.env.SUNDAY_PROMO_BUMPER_TRACK || DEFAULT_SUNDAY_BUMPER).trim();
 
@@ -59,7 +60,13 @@ async function main() {
   console.log('================================');
   console.log(`Episodes planned: ${episodes.length}`);
   console.log(`YouTube upload after each episode: ${SUNDAY_UPLOAD_YOUTUBE ? 'yes' : 'no'}`);
+  console.log(`Refresh weekly-top10 first: ${RUN_WEEKLY_TOP10_BEFORE_MARATHON ? 'yes' : 'no'}`);
   console.log('');
+
+  if (RUN_WEEKLY_TOP10_BEFORE_MARATHON) {
+    console.log('📊 Refreshing weekly Top 10 context before marathon...');
+    await runNodeScript('scripts/generate-weekly-top10.mjs');
+  }
 
   for (let i = 0; i < episodes.length; i++) {
     const ep = episodes[i];

@@ -57,7 +57,13 @@ const POLTSAMAA = { name: 'Poltsamaa, Estonia', latitude: 58.6525, longitude: 25
 const BROADCAST_SLOT = (process.env.BROADCAST_SLOT || '').trim().toLowerCase();
 const BROADCAST_FORMAT = (process.env.BROADCAST_FORMAT || 'daily').trim().toLowerCase();
 const SUNDAY_DEEP_DIVE = process.env.SUNDAY_DEEP_DIVE === '1';
-const ENABLE_EXTERNAL_RESEARCH = process.env.ENABLE_EXTERNAL_RESEARCH !== '0';
+const ENABLE_EXTERNAL_RESEARCH = (() => {
+  const raw = String(process.env.ENABLE_EXTERNAL_RESEARCH || '').trim().toLowerCase();
+  if (raw === '1' || raw === 'true' || raw === 'yes') return true;
+  if (raw === '0' || raw === 'false' || raw === 'no') return false;
+  // Default: save API calls on routine runs; enable automatically for Sunday deep-dive episodes.
+  return BROADCAST_FORMAT === 'sunday_special' && SUNDAY_DEEP_DIVE;
+})();
 const SKIP_COVER_IMAGE = process.env.SKIP_COVER_IMAGE === '1';
 const REUSE_RECENT_COVER = process.env.REUSE_RECENT_COVER === '1';
 const ENFORCE_TALLINN_SLOT_TIME = process.env.ENFORCE_TALLINN_SLOT_TIME === '1';
@@ -1781,6 +1787,7 @@ async function main() {
   console.log(`\n📅 ${new Date().toISOString()}\n`);
   console.log(`🎛️  Format: ${BROADCAST_FORMAT}${SUNDAY_DEEP_DIVE ? ' (deep-dive)' : ''}`);
   console.log(`🧮 Script budget: ${SCRIPT_TARGET_MIN_LINES}-${SCRIPT_TARGET_MAX_LINES} lines`);
+  console.log(`🔎 External research: ${ENABLE_EXTERNAL_RESEARCH ? 'enabled' : 'disabled'}`);
 
   if (ENFORCE_TALLINN_SLOT_TIME && !BROADCAST_SLOT && !shouldRunScheduledBroadcast()) {
     const tallinnNow = getTallinnNow();

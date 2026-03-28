@@ -64,6 +64,7 @@ jobs:
           # Memory linking
           MEMORY_LOOKBACK_DAYS: ${{ secrets.MEMORY_LOOKBACK_DAYS || vars.MEMORY_LOOKBACK_DAYS || '14' }}
           MEMORY_MAX_LINKS: ${{ secrets.MEMORY_MAX_LINKS || vars.MEMORY_MAX_LINKS || '8' }}
+          RUN_WEEKLY_TOP10_BEFORE_MARATHON: ${{ vars.RUN_WEEKLY_TOP10_BEFORE_MARATHON || '1' }}
 
           # BGM
           BGM_VOLUME: ${{ vars.BGM_VOLUME || '0.10' }}

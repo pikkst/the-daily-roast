@@ -213,6 +213,8 @@ Cloudflare will automatically redeploy whenever you push to the `main` branch.
 | `SCRIPT_MIN_LINES` | Lower script length target override for custom formats | No |
 | `SCRIPT_MAX_LINES` | Upper script length target override for custom formats | No |
 | `SUNDAY_UPLOAD_YOUTUBE` | For marathon orchestrator: upload each generated episode (`1`/`0`) | No |
+| `ENABLE_EXTERNAL_RESEARCH` | Explicitly force external research on/off (`1`/`0`); default auto-enables only for Sunday deep-dive | No |
+| `RUN_WEEKLY_TOP10_BEFORE_MARATHON` | Refresh weekly rankings before Sunday marathon starts (default: `1`) | No |
 | `PROMO_PAUSE_SECONDS` | Silence inserted around promo segment when merging audio parts (default: `0.7`) | No |
 | `PROMO_BUMPER_TRACK` | Optional audio file/URL used as a short jingle between merged script segments | No |
 | `PROMO_BUMPER_SECONDS` | Max bumper clip duration used from `PROMO_BUMPER_TRACK` (default: `1.2`) | No |
