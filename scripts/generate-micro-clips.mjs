@@ -126,14 +126,13 @@ async function ensureClipBucket() {
     const exists = (buckets || []).some((b) => b.name === CLIP_BUCKET);
     if (exists) return;
 
-    // Try to create with 50MB limit (Supabase free-tier max)
     let { error } = await db.storage.createBucket(CLIP_BUCKET, {
       public: true,
       allowedMimeTypes: ['video/mp4'],
-      fileSizeLimit: 50 * 1024 * 1024
+      fileSizeLimit: 500 * 1024 * 1024  // 500MB — paid plan
     });
 
-    // If that fails (e.g. plan doesn't support fileSizeLimit), retry bare
+    // Fallback: retry without size limit
     if (error) {
       console.warn(`  ⚠️  Bucket create with size limit failed (${error.message}), retrying without limit...`);
       ({ error } = await db.storage.createBucket(CLIP_BUCKET, { public: true }));
