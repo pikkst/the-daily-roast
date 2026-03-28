@@ -1867,16 +1867,53 @@ Aspect ratio: 16:9 landscape. High contrast, bold typography style.`;
 
 // ---------- Step 5: Upload to Supabase Storage ----------
 
+async function convertWavToMp3(wavBuffer) {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'roast-mp3-'));
+  const wavPath = path.join(tmpDir, 'input.wav');
+  const mp3Path = path.join(tmpDir, 'output.mp3');
+  try {
+    fs.writeFileSync(wavPath, wavBuffer);
+    await new Promise((resolve, reject) => {
+      const proc = spawn('ffmpeg', [
+        '-y', '-i', wavPath,
+        '-codec:a', 'libmp3lame', '-q:a', '4',  // VBR ~165kbps — good quality, small size
+        '-ar', '44100',
+        mp3Path
+      ]);
+      proc.on('close', code => code === 0 ? resolve() : reject(new Error(`ffmpeg mp3 exit ${code}`)));
+      proc.on('error', reject);
+    });
+    return fs.readFileSync(mp3Path);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
+
 async function uploadAudio(db, wavBuffer) {
   const date = new Date().toISOString().slice(0, 10);
-  const fileName = `broadcast-${date}-${Date.now()}.wav`;
+
+  // Convert to MP3 for podcast compatibility (Spotify, Apple Podcasts)
+  let uploadBuffer = wavBuffer;
+  let ext = 'wav';
+  let contentType = 'audio/wav';
+  try {
+    console.log('  🎵 Converting WAV → MP3...');
+    uploadBuffer = await convertWavToMp3(wavBuffer);
+    ext = 'mp3';
+    contentType = 'audio/mpeg';
+    console.log(`  ✅ MP3 ready (${Math.round(uploadBuffer.length / 1024 / 1024 * 10) / 10}MB)`);
+  } catch (convErr) {
+    console.warn(`  ⚠️  MP3 conversion failed, uploading WAV: ${convErr.message}`);
+  }
+
+  const fileName = `broadcast-${date}-${Date.now()}.${ext}`;
   const filePath = `${new Date().toISOString().slice(0, 7)}/${fileName}`;
 
   try {
     const { data, error } = await db.storage
       .from(AUDIO_BUCKET)
-      .upload(filePath, wavBuffer, {
-        contentType: 'audio/wav',
+      .upload(filePath, uploadBuffer, {
+        contentType,
         cacheControl: '31536000',
         upsert: false
       });
