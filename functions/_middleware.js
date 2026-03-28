@@ -184,9 +184,9 @@ export async function onRequest(context) {
     return handleSitemap(url);
   }
 
-  // --- Podcast RSS Feed — 301 → Podbean canonical feed ---
+  // --- Podcast RSS Feed ---
   if (url.pathname === '/podcast.xml' || url.pathname === '/feed' || url.pathname === '/rss') {
-    return Response.redirect('https://feed.podbean.com/huntersest/feed.xml', 301);
+    return handlePodcastFeed(url);
   }
 
   // --- Radio OG injection ---
