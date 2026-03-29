@@ -72,6 +72,12 @@
     quizMode = mode;
     currentDayKey = getDayKey();
 
+    trackEvent('quiz_start', {
+      mode: quizMode,
+      day_key: currentDayKey,
+      page_path: window.location.pathname
+    });
+
     document.getElementById('quiz-intro').style.display = 'none';
     document.getElementById('quiz-results').style.display = 'none';
     document.getElementById('quiz-game').style.display = '';
@@ -175,6 +181,13 @@
     const q = quizData[currentQuestion];
     const isCorrect = (answer === 'roast' && q.isRoast) || (answer === 'real' && !q.isRoast);
 
+    trackEvent('quiz_answer', {
+      mode: quizMode,
+      question_index: currentQuestion + 1,
+      selected: answer,
+      correct: isCorrect ? '1' : '0'
+    });
+
     const roastBtn = document.getElementById('choice-roast');
     const realBtn = document.getElementById('choice-real');
     const feedback = document.getElementById('quiz-feedback');
@@ -231,6 +244,14 @@
     else verdict = '💀 Oh no... You might want to check your news sources!';
 
     document.getElementById('quiz-verdict').textContent = verdict;
+
+    trackEvent('quiz_complete', {
+      mode: quizMode,
+      score: score,
+      total: total,
+      percent: Math.round(pct * 100),
+      day_key: currentDayKey || ''
+    });
 
     const dailySummaryEl = document.getElementById('quiz-daily-summary');
     const shareBtn = document.getElementById('quiz-share');
@@ -488,8 +509,15 @@
 
     newBtn.addEventListener('click', async () => {
       const text = `I scored ${currentScore}/${total} in today's Roast or Real Daily Challenge (${dayKey}) on The Daily Roast. Current streak: ${streak}. Can you beat me?`;
-      const url = `${getPublicSiteUrl()}/quiz.html`;
+      const url = `${getPublicSiteUrl()}/quiz`;
       const filename = `roast-or-real-${dayKey}.png`;
+
+      trackEvent('quiz_share_click', {
+        mode: quizMode,
+        score: currentScore,
+        total: total,
+        day_key: dayKey
+      });
 
       const shareImageBlob = await ensureShareCardBlob();
       if (navigator.share) {
@@ -533,6 +561,11 @@
     newBtn.addEventListener('click', async () => {
       const dataUrl = latestShareCardDataUrl;
       if (!dataUrl) return;
+
+      trackEvent('quiz_share_card_download', {
+        mode: quizMode,
+        day_key: dayKey
+      });
 
       const a = document.createElement('a');
       a.href = dataUrl;

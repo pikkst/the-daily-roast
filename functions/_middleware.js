@@ -183,6 +183,11 @@ async function handleSitemap(url) {
   <url><loc>${origin}/quiz</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
   <url><loc>${origin}/radio</loc><changefreq>daily</changefreq><priority>0.8</priority></url>`;
 
+    xml += `\n  <url><loc>${origin}/weekly</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>`;
+    xml += `\n  <url><loc>${origin}/about</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>`;
+    xml += `\n  <url><loc>${origin}/contact</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>`;
+    xml += `\n  <url><loc>${origin}/podcast.xml</loc><changefreq>daily</changefreq><priority>0.5</priority></url>`;
+
     for (const cat of CATEGORIES) {
       xml += `\n  <url><loc>${origin}/?cat=${cat}</loc><changefreq>daily</changefreq><priority>0.8</priority></url>`;
     }
