@@ -3,6 +3,9 @@
 // ============================================
 
 const CONFIG = {
+  // Public site origin used for canonical/share links
+  SITE_URL: 'https://thedailyroast.online',
+
   // Supabase
   SUPABASE_URL: 'https://pbwswrieljqfshnjulzs.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBid3N3cmllbGpxZnNobmp1bHpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNzg5ODQsImV4cCI6MjA4OTc1NDk4NH0.buK75E84SRp-By6XCsKgMFnl31nNgj5cZV7e3lEkIiI',
@@ -119,6 +122,11 @@ function getImageUrl(article) {
   if (article.image_url) return article.image_url;
   // Fallback: use picsum with article slug as seed
   return `https://picsum.photos/seed/${article.slug}/800/400`;
+}
+
+function getPublicSiteUrl() {
+  const raw = String(CONFIG.SITE_URL || '').trim();
+  return raw ? raw.replace(/\/$/, '') : window.location.origin;
 }
 
 // Shared: Disclaimer banner close

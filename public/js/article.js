@@ -213,7 +213,8 @@
   function setupShare(article) {
     // Build canonical URL with query param (not hash) so social crawlers can read OG tags
     const slug = new URLSearchParams(window.location.search).get('slug') || article.slug;
-    const url = `${window.location.origin}/article?slug=${slug}`;
+    const baseUrl = getPublicSiteUrl();
+    const url = `${baseUrl}/article?slug=${slug}`;
     const title = encodeURIComponent(article.title);
     const text = encodeURIComponent(article.excerpt);
 
@@ -553,7 +554,8 @@
     const schemaEl = document.getElementById('article-schema');
     if (!schemaEl) return;
 
-    const articleUrl = `${window.location.origin}/article?slug=${article.slug}`;
+    const baseUrl = getPublicSiteUrl();
+    const articleUrl = `${baseUrl}/article?slug=${article.slug}`;
 
     const schema = {
       "@context": "https://schema.org",
@@ -571,10 +573,10 @@
       "publisher": {
         "@type": "Organization",
         "name": "The Daily Roast",
-        "url": window.location.origin,
+        "url": baseUrl,
         "logo": {
           "@type": "ImageObject",
-          "url": `${window.location.origin}/icons/icon-512.svg`
+          "url": `${baseUrl}/icons/icon-512.svg`
         }
       },
       "genre": "Satire",

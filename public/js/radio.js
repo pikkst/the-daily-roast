@@ -675,7 +675,7 @@
   // ── Share ──
 
   function setupShare() {
-    const shareUrl = window.location.origin + '/radio';
+    const shareUrl = getPublicSiteUrl() + '/radio';
     const shareTitle = broadcast.title || 'The Daily Roast Radio';
     const shareText = 'Tune in to The Daily Roast Radio — AI comedy podcast that roasts the day\'s biggest headlines! 📻🔥';
 

@@ -488,7 +488,7 @@
 
     newBtn.addEventListener('click', async () => {
       const text = `I scored ${currentScore}/${total} in today's Roast or Real Daily Challenge (${dayKey}) on The Daily Roast. Current streak: ${streak}. Can you beat me?`;
-      const url = `${window.location.origin}/quiz.html`;
+      const url = `${getPublicSiteUrl()}/quiz.html`;
       const filename = `roast-or-real-${dayKey}.png`;
 
       const shareImageBlob = await ensureShareCardBlob();

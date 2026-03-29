@@ -117,7 +117,7 @@
 
     if (shareBtn) {
       shareBtn.addEventListener('click', () => {
-        const url = window.location.origin + '/radio';
+        const url = getPublicSiteUrl() + '/radio';
         navigator.clipboard.writeText(url).then(() => {
           shareBtn.textContent = '✅';
           setTimeout(() => { shareBtn.textContent = '🔗'; }, 2000);
