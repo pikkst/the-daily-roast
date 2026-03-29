@@ -1042,7 +1042,7 @@ async function fetchArticlesPerCategory(db, usedArticleIds = new Set()) {
     try {
       const { data, error } = await db
         .from('articles_with_category')
-        .select('id, title, excerpt, category_slug, category_name, created_at')
+        .select('id, title, excerpt, content, category_slug, category_name, created_at')
         .eq('category_slug', category)
         .eq('published', true)
         .order('created_at', { ascending: false })
@@ -1242,9 +1242,15 @@ async function generateScript(
 ) {
   console.log('🎙️  Generating comedy radio script...\n');
 
-  const articleSummaries = articles.map(a =>
-    `- [${CATEGORY_ICONS[a.category_slug]} ${a.category_name}] "${a.title}" — ${a.excerpt}`
-  ).join('\n');
+  const articleSummaries = articles.map(a => {
+    // Strip HTML tags from content (it's stored with HTML blocks from article generation)
+    const rawContent = String(a.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    // Use content body up to 600 chars, falling back to excerpt
+    const bodySnippet = rawContent.length > 80
+      ? rawContent.slice(0, 600) + (rawContent.length > 600 ? '…' : '')
+      : (a.excerpt || '');
+    return `- [${CATEGORY_ICONS[a.category_slug]} ${a.category_name}] "${a.title}"\n  Summary: ${bodySnippet}`;
+  }).join('\n\n');
 
   const hostPersonaBrief = [
     `Joe bio: ${HOST_BIO_JOE}`,
