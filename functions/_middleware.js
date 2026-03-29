@@ -263,13 +263,6 @@ export async function onRequest(context) {
     return applySecurityHeaders(await context.next());
   }
 
-  if (!slugFromPath && slugFromQuery && (url.pathname === '/article' || url.pathname.endsWith('/article.html'))) {
-    const redirectUrl = new URL(context.request.url);
-    redirectUrl.pathname = getArticlePath(slugFromQuery);
-    redirectUrl.search = '';
-    return Response.redirect(redirectUrl.toString(), 301);
-  }
-
   let sourceRequest = context.request;
   if (url.pathname.startsWith('/article/')) {
     const rewritten = new URL(context.request.url);

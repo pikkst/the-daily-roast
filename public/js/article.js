@@ -17,11 +17,12 @@
     // Prefer clean path /article/<slug>, then fallback to ?slug=...
     const params = new URLSearchParams(window.location.search);
     let slug = extractSlugFromPath() || params.get('slug');
-
-    // Canonicalize old query URLs to clean path.
-    if (!extractSlugFromPath() && params.get('slug')) {
-      window.location.replace(getArticlePath(params.get('slug')));
-      return;
+    if (!slug) {
+      try {
+        slug = sessionStorage.getItem('tdr_last_article_slug') || '';
+      } catch (_) {
+        slug = '';
+      }
     }
 
     // Fallback: support old hash URLs (article.html#slug) and redirect
@@ -39,6 +40,8 @@
       showNotFound();
       return;
     }
+
+    rememberLastArticleSlug(slug);
 
     loadArticle(slug);
   }
@@ -90,6 +93,7 @@
         renderArticle(mapped);
         trackView(slug);
         loadRelated(mapped.category_id, mapped.id, mapped.created_at);
+        rememberLastArticleSlug(mapped.slug || slug);
         trackEvent('article_open', {
           slug: String(mapped.slug || ''),
           category: String(mapped.category_slug || ''),
@@ -101,6 +105,7 @@
       renderArticle(data);
       trackView(slug);
       loadRelated(data.category_id, data.id, data.created_at);
+      rememberLastArticleSlug(data.slug || slug);
       trackEvent('article_open', {
         slug: String(data.slug || ''),
         category: String(data.category_slug || ''),

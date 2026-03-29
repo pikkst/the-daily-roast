@@ -147,8 +147,38 @@ function trackEvent(eventName, params) {
   }
 }
 
+function extractArticleSlugFromHref(href) {
+  if (!href) return '';
+  try {
+    const url = new URL(href, window.location.origin);
+    const fromPath = url.pathname.match(/^\/article\/([^/?#]+)/i);
+    if (fromPath && fromPath[1]) return decodeURIComponent(fromPath[1]);
+    const fromQuery = String(url.searchParams.get('slug') || '').trim();
+    return fromQuery;
+  } catch (_) {
+    return '';
+  }
+}
+
+function rememberLastArticleSlug(slug) {
+  const safe = String(slug || '').trim();
+  if (!safe) return;
+  try {
+    sessionStorage.setItem('tdr_last_article_slug', safe);
+  } catch (_) {
+    // Ignore storage failures.
+  }
+}
+
 // Shared: Disclaimer banner close
 document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('click', (event) => {
+    const link = event.target.closest('a[href]');
+    if (!link) return;
+    const slug = extractArticleSlugFromHref(link.getAttribute('href'));
+    if (slug) rememberLastArticleSlug(slug);
+  });
+
   const closeBtn = document.getElementById('disclaimer-close');
   const bar = document.getElementById('disclaimer-bar');
   
