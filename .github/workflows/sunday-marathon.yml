@@ -2,11 +2,32 @@ name: Sunday Marathon Broadcast
 
 on:
   schedule:
-    # 09:10 Tallinn in winter/summer variants
-    - cron: '10 6 * * 0'
-    - cron: '10 7 * * 0'
+    # Sunday slots in Tallinn time: 09:10, 15:10, 21:10 (with seasonal UTC variants)
+    - cron: '10 6,12,18 * * 0'
+    - cron: '10 7,13,19 * * 0'
+    # Safety-net retries in case minute-10 trigger is delayed/missed
+    - cron: '40 6,12,18 * * 0'
+    - cron: '40 7,13,19 * * 0'
   workflow_dispatch:
     inputs:
+      run_mode:
+        description: 'single_slot = one Sunday slot only, full_marathon = all three back-to-back'
+        required: false
+        type: choice
+        default: single_slot
+        options:
+          - single_slot
+          - full_marathon
+      sunday_slot:
+        description: 'Manual slot override when run_mode=single_slot (auto uses current Tallinn time)'
+        required: false
+        type: choice
+        default: auto
+        options:
+          - auto
+          - morning
+          - afternoon
+          - evening
       replace_existing:
         description: 'Delete same-day editions before regenerating'
         required: false
@@ -23,7 +44,101 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  slot-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      sunday_slot: ${{ steps.check.outputs.sunday_slot }}
+
+    steps:
+      - name: Check Sunday slot gate
+        id: check
+        run: |
+          tallinn_hh="$(TZ=Europe/Tallinn date +%H)"
+          tallinn_hhmm="$(TZ=Europe/Tallinn date +%H:%M)"
+          tallinn_dow="$(TZ=Europe/Tallinn date +%u)"
+          tallinn_offset="$(TZ=Europe/Tallinn date +%z)"
+          triggered_cron="${{ github.event.schedule || '' }}"
+          run_mode="${{ github.event.inputs.run_mode || 'single_slot' }}"
+          input_slot="${{ github.event.inputs.sunday_slot || 'auto' }}"
+
+          choose_slot_from_time() {
+            if [ "$tallinn_hh" -lt 12 ]; then
+              echo "morning"
+            elif [ "$tallinn_hh" -lt 18 ]; then
+              echo "afternoon"
+            else
+              echo "evening"
+            fi
+          }
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "$run_mode" = "full_marathon" ]; then
+              echo "should_run=true" >> "$GITHUB_OUTPUT"
+              echo "sunday_slot=" >> "$GITHUB_OUTPUT"
+              echo "🧪 Manual run: full_marathon mode, slot gate bypassed"
+              exit 0
+            fi
+
+            if [ "$input_slot" = "morning" ] || [ "$input_slot" = "afternoon" ] || [ "$input_slot" = "evening" ]; then
+              slot="$input_slot"
+            else
+              slot="$(choose_slot_from_time)"
+            fi
+
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "sunday_slot=$slot" >> "$GITHUB_OUTPUT"
+            echo "🧪 Manual run: single_slot mode, slot=$slot (current: $tallinn_hhmm)"
+            exit 0
+          fi
+
+          if [ "$tallinn_dow" != "7" ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "sunday_slot=" >> "$GITHUB_OUTPUT"
+            echo "⏭️ Not Sunday in Tallinn ($tallinn_hhmm), skipping"
+            exit 0
+          fi
+
+          # Seasonal guard: only one cron family is valid for current Tallinn offset.
+          # +0200 (winter): use * 7,13,19 UTC family
+          # +0300 (summer): use * 6,12,18 UTC family
+          if [ "$tallinn_offset" = "+0200" ] && [[ "$triggered_cron" == *"6,12,18"* ]]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "sunday_slot=" >> "$GITHUB_OUTPUT"
+            echo "⏭️ Off-season cron trigger ($triggered_cron, offset $tallinn_offset) at $tallinn_hhmm, skipping"
+            exit 0
+          fi
+
+          if [ "$tallinn_offset" = "+0300" ] && [[ "$triggered_cron" == *"7,13,19"* ]]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "sunday_slot=" >> "$GITHUB_OUTPUT"
+            echo "⏭️ Off-season cron trigger ($triggered_cron, offset $tallinn_offset) at $tallinn_hhmm, skipping"
+            exit 0
+          fi
+
+          if [ "$tallinn_hh" = "09" ]; then
+            slot="morning"
+          elif [ "$tallinn_hh" = "15" ]; then
+            slot="afternoon"
+          elif [ "$tallinn_hh" = "21" ]; then
+            slot="evening"
+          else
+            slot=""
+          fi
+
+          if [ -n "$slot" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "sunday_slot=$slot" >> "$GITHUB_OUTPUT"
+            echo "✅ Sunday slot matched: $slot ($tallinn_hhmm)"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "sunday_slot=" >> "$GITHUB_OUTPUT"
+            echo "⏭️ Sunday slot not matched ($tallinn_hhmm), skipping"
+          fi
+
   run-sunday-marathon:
+    needs: slot-check
+    if: needs.slot-check.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -50,6 +165,8 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUNDAY_MODE: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.run_mode || 'single_slot') || 'single_slot' }}
+          SUNDAY_SLOT: ${{ needs.slot-check.outputs.sunday_slot }}
           FORCE_REPLACE_EDITION: ${{ (inputs.replace_existing == true || github.event.inputs.replace_existing == 'true') && '1' || '0' }}
 
           # Broadcast voice/persona tuning

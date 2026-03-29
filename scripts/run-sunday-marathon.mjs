@@ -4,6 +4,8 @@ const SUNDAY_UPLOAD_YOUTUBE = process.env.SUNDAY_UPLOAD_YOUTUBE === '1';
 const FORCE_REPLACE_EDITION = process.env.FORCE_REPLACE_EDITION === '1';
 const RUN_WEEKLY_TOP10_BEFORE_MARATHON = process.env.RUN_WEEKLY_TOP10_BEFORE_MARATHON !== '0';
 const SUNDAY_GENERATE_CLIPS = process.env.SUNDAY_GENERATE_CLIPS !== '0';
+const SUNDAY_MODE = String(process.env.SUNDAY_MODE || 'single_slot').trim().toLowerCase();
+const SUNDAY_SLOT = String(process.env.SUNDAY_SLOT || '').trim().toLowerCase();
 const SUNDAY_CLIP_COUNT = String(process.env.SUNDAY_CLIP_COUNT || '3');
 const SUNDAY_CLIP_SECONDS = String(process.env.SUNDAY_CLIP_SECONDS || '30');
 const SUNDAY_CLIP_BUCKET = String(process.env.SUNDAY_CLIP_BUCKET || 'broadcast-clips');
@@ -58,11 +60,26 @@ const episodes = [
   }
 ];
 
+function resolveEpisodesToRun() {
+  if (SUNDAY_MODE === 'full_marathon') {
+    return episodes;
+  }
+
+  const allowedSlots = new Set(['morning', 'afternoon', 'evening']);
+  const slot = allowedSlots.has(SUNDAY_SLOT) ? SUNDAY_SLOT : 'morning';
+  const match = episodes.find((ep) => ep.slot === slot);
+  return match ? [match] : [episodes[0]];
+}
+
 async function main() {
+  const episodesToRun = resolveEpisodesToRun();
+
   console.log('');
   console.log('🎙️ Sunday Marathon Orchestrator');
   console.log('================================');
-  console.log(`Episodes planned: ${episodes.length}`);
+  console.log(`Mode: ${SUNDAY_MODE}`);
+  console.log(`Slot: ${SUNDAY_SLOT || 'auto'}`);
+  console.log(`Episodes planned: ${episodesToRun.length}`);
   console.log(`YouTube upload after each episode: ${SUNDAY_UPLOAD_YOUTUBE ? 'yes' : 'no'}`);
   console.log(`Micro clips after each episode: ${SUNDAY_GENERATE_CLIPS ? 'yes' : 'no'}`);
   console.log(`Refresh weekly-top10 first: ${RUN_WEEKLY_TOP10_BEFORE_MARATHON ? 'yes' : 'no'}`);
@@ -73,9 +90,9 @@ async function main() {
     await runNodeScript('scripts/generate-weekly-top10.mjs');
   }
 
-  for (let i = 0; i < episodes.length; i++) {
-    const ep = episodes[i];
-    console.log(`\n▶ Episode ${i + 1}/${episodes.length}: ${ep.label} (${ep.slot})`);
+  for (let i = 0; i < episodesToRun.length; i++) {
+    const ep = episodesToRun[i];
+    console.log(`\n▶ Episode ${i + 1}/${episodesToRun.length}: ${ep.label} (${ep.slot})`);
 
     await runNodeScript('scripts/generate-broadcast.mjs', {
       BROADCAST_FORMAT: 'sunday_special',
@@ -106,7 +123,7 @@ async function main() {
       });
     }
 
-    if (i < episodes.length - 1) {
+    if (i < episodesToRun.length - 1) {
       console.log('⏳ Cooling down 15 seconds before next episode...');
       await new Promise((resolve) => setTimeout(resolve, 15000));
     }
