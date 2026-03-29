@@ -1361,6 +1361,15 @@ COMEDY STYLE:
 - Prefer clever comparisons/metaphors over random nonsense.
 - Reflect host backstory subtly in tone, references, and chemistry (do not read bios out loud directly).
 
+EMOTIONAL DELIVERY CUES (MANDATORY — use inline in text, not as stage directions):
+- Embed emotion cues directly inside the spoken text using square brackets: [laughing], [sarcastically], [sighing], [gasping], [whispering], [excitedly], [deadpan].
+- Use them sparingly but meaningfully — 2–4 cues per story segment, not every line.
+- Joe favors [sarcastically], [sighing], [deadpan]. Reserve his [laughing] for moments that genuinely break him.
+- Jane favors [laughing], [excitedly], [gasping]. Her [sarcastically] should feel like a mock-Joe impression.
+- Example: {"speaker": "Jane", "text": "[gasping] Wait, they actually said that out loud? In a press release?"}  
+- Example: {"speaker": "Joe", "text": "[sarcastically] Groundbreaking stuff. Truly a historic moment for democracy."}  
+- Example: {"speaker": "Jane", "text": "[laughing] I can't — okay, I'm sorry, I just can't with this one."}
+
 CONTROLLED HUMAN TANGENTS (MANDATORY):
 - Include approximately ${TARGET_TANGENTS_PER_EPISODE} short tangent moments across the whole episode.
 - A tangent can be: a quick personal memory, a newsroom memory, or a historical comparison.
@@ -1506,7 +1515,18 @@ async function generateAudio(script, retries = 2) {
     return PROMO_BUMPER_TRACK;
   }
 
-  const ttsPrompt = `TTS the following conversation between Joe and Jane:\n` +
+  const ttsPrompt = `Read aloud this satirical radio conversation between two hosts, Joe and Jane.
+` +
+    `Delivery style:
+` +
+    `- Joe: dry, deadpan, slightly tired baritone. Lets sarcasm drip slowly. Rare genuine laugh makes it land harder.
+` +
+    `- Jane: energetic, warm, quick. Laughs easily and genuinely. Sarcasm is bright and fast.
+` +
+    `- Follow any inline emotion cues like [laughing], [sarcastically], [sighing], [gasping] embedded in the text.
+` +
+    `- Natural conversation rhythm: interruptions feel real, pauses are human, not robotic.
+\n` +
     script.map(line => `${line.speaker}: ${line.text}`).join('\n');
 
   const wordCount = script
@@ -1652,7 +1672,12 @@ async function generateAudio(script, retries = 2) {
   }
 
   async function generateChunkAudio(chunkLines) {
-    const chunkPrompt = `TTS the following conversation between Joe and Jane:\n` +
+    const chunkPrompt = `Read aloud this satirical radio conversation between two hosts, Joe and Jane.\n` +
+      `Delivery style:\n` +
+      `- Joe: dry, deadpan, slightly tired baritone. Lets sarcasm drip slowly. Rare genuine laugh makes it land harder.\n` +
+      `- Jane: energetic, warm, quick. Laughs easily and genuinely. Sarcasm is bright and fast.\n` +
+      `- Follow any inline emotion cues like [laughing], [sarcastically], [sighing], [gasping] embedded in the text.\n` +
+      `- Natural conversation rhythm: interruptions feel real, pauses are human, not robotic.\n\n` +
       chunkLines.map(line => `${line.speaker}: ${line.text}`).join('\n');
 
     const response = await genai.models.generateContent({
