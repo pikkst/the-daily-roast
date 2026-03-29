@@ -10,6 +10,11 @@ let SUPABASE_URL = DEFAULT_SUPABASE_URL;
 let SUPABASE_ANON_KEY = DEFAULT_SUPABASE_ANON_KEY;
 const CATEGORIES = ['politics', 'technology', 'business', 'science', 'entertainment', 'sports', 'world'];
 
+function getArticlePath(slug) {
+  const safe = encodeURIComponent(String(slug || '').trim());
+  return safe ? `/article/${safe}` : '/article';
+}
+
 function applySecurityHeaders(response) {
   const secured = new Response(response.body, response);
   const contentType = (secured.headers.get('Content-Type') || '').toLowerCase();
@@ -185,7 +190,7 @@ async function handleSitemap(url) {
     if (Array.isArray(articles)) {
       for (const a of articles) {
         const lastmod = new Date(a.updated_at || a.created_at).toISOString().split('T')[0];
-        xml += `\n  <url><loc>${origin}/article?slug=${a.slug}</loc><lastmod>${lastmod}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>`;
+        xml += `\n  <url><loc>${origin}${getArticlePath(a.slug)}</loc><lastmod>${lastmod}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>`;
       }
     }
     xml += '\n</urlset>';
@@ -242,14 +247,34 @@ export async function onRequest(context) {
   }
 
   // --- Article OG injection ---
-  if (!(url.pathname === '/article' || url.pathname.endsWith('/article.html')) || !url.searchParams.get('slug')) {
+  const isArticleRoute = url.pathname === '/article' || url.pathname.endsWith('/article.html') || url.pathname.startsWith('/article/');
+  const slugFromPath = url.pathname.startsWith('/article/')
+    ? decodeURIComponent(url.pathname.slice('/article/'.length).split('/')[0] || '').trim()
+    : '';
+  const slugFromQuery = String(url.searchParams.get('slug') || '').trim();
+  const slug = slugFromPath || slugFromQuery;
+
+  if (!isArticleRoute || !slug) {
     return applySecurityHeaders(await context.next());
   }
 
-  const slug = url.searchParams.get('slug');
+  if (!slugFromPath && slugFromQuery && (url.pathname === '/article' || url.pathname.endsWith('/article.html'))) {
+    const redirectUrl = new URL(context.request.url);
+    redirectUrl.pathname = getArticlePath(slugFromQuery);
+    redirectUrl.search = '';
+    return Response.redirect(redirectUrl.toString(), 301);
+  }
+
+  let sourceRequest = context.request;
+  if (url.pathname.startsWith('/article/')) {
+    const rewritten = new URL(context.request.url);
+    rewritten.pathname = '/article.html';
+    rewritten.search = '';
+    sourceRequest = new Request(rewritten.toString(), context.request);
+  }
 
   // Fetch the original static HTML
-  const response = await context.next();
+  const response = await context.next(sourceRequest);
   const contentType = response.headers.get('Content-Type') || '';
 
   // Only process HTML responses
@@ -286,7 +311,7 @@ export async function onRequest(context) {
     }
 
     const article = articles[0];
-    const articleUrl = `${url.origin}/article?slug=${encodeURIComponent(slug)}`;
+    const articleUrl = `${url.origin}${getArticlePath(slug)}`;
     const title = escapeHtml(article.title);
     const description = escapeHtml(article.meta_description || article.excerpt);
     const image = article.image_url || `https://picsum.photos/seed/${slug}/1200/630`;
@@ -325,6 +350,11 @@ export async function onRequest(context) {
     html = html.replace(
       /<meta name="description"[^>]*>/,
       `<meta name="description" content="${description}">`
+    );
+
+    html = html.replace(
+      /<link rel="canonical"[^>]*>/,
+      `<link rel="canonical" href="${escapeHtml(articleUrl)}">`
     );
 
     // Inject og:url, og:site_name, and twitter:image after og:image

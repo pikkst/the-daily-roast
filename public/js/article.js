@@ -14,16 +14,21 @@
     if (initialized) return;
     initialized = true;
 
-    // Get slug from query parameter ?slug=xxx
+    // Prefer clean path /article/<slug>, then fallback to ?slug=...
     const params = new URLSearchParams(window.location.search);
-    let slug = params.get('slug');
+    let slug = extractSlugFromPath() || params.get('slug');
+
+    // Canonicalize old query URLs to clean path.
+    if (!extractSlugFromPath() && params.get('slug')) {
+      window.location.replace(getArticlePath(params.get('slug')));
+      return;
+    }
 
     // Fallback: support old hash URLs (article.html#slug) and redirect
     if (!slug && window.location.hash) {
       slug = window.location.hash.slice(1);
       if (slug) {
-        // Redirect to clean URL for proper OG tags
-        window.location.replace(`/article?slug=${slug}`);
+        window.location.replace(getArticlePath(slug));
         return;
       }
     }
@@ -85,12 +90,22 @@
         renderArticle(mapped);
         trackView(slug);
         loadRelated(mapped.category_id, mapped.id, mapped.created_at);
+        trackEvent('article_open', {
+          slug: String(mapped.slug || ''),
+          category: String(mapped.category_slug || ''),
+          page_path: window.location.pathname
+        });
         return;
       }
 
       renderArticle(data);
       trackView(slug);
       loadRelated(data.category_id, data.id, data.created_at);
+      trackEvent('article_open', {
+        slug: String(data.slug || ''),
+        category: String(data.category_slug || ''),
+        page_path: window.location.pathname
+      });
     } catch (err) {
       console.error('Error loading article:', err);
       showNotFound();
@@ -115,6 +130,12 @@
     setMeta('og-description', safeExcerpt);
     setMeta('tw-title', safeTitle);
     setMeta('tw-description', safeExcerpt);
+
+    const canonicalHref = getArticleUrl(article.slug || new URLSearchParams(window.location.search).get('slug'));
+    const canonicalEl = document.querySelector('link[rel="canonical"]');
+    if (canonicalEl) {
+      canonicalEl.setAttribute('href', canonicalHref);
+    }
 
     if (article.image_url) {
       setMeta('og-image', article.image_url);
@@ -211,12 +232,9 @@
   }
 
   function setupShare(article) {
-    // Build canonical URL with query param (not hash) so social crawlers can read OG tags
-    const slug = new URLSearchParams(window.location.search).get('slug') || article.slug;
-    const baseUrl = getPublicSiteUrl();
-    const url = `${baseUrl}/article?slug=${slug}`;
+    const slug = extractSlugFromPath() || new URLSearchParams(window.location.search).get('slug') || article.slug;
+    const url = getArticleUrl(slug);
     const title = encodeURIComponent(article.title);
-    const text = encodeURIComponent(article.excerpt);
 
     const twBtn = document.getElementById('sb-tw');
     const fbBtn = document.getElementById('sb-fb');
@@ -225,18 +243,21 @@
 
     if (twBtn) {
       twBtn.addEventListener('click', () => {
+        trackEvent('article_share_click', { platform: 'x', slug: String(slug || '') });
         window.open(`https://twitter.com/intent/tweet?text=${title}&url=${encodeURIComponent(url)}`, '_blank', 'width=600,height=400');
       });
     }
 
     if (fbBtn) {
       fbBtn.addEventListener('click', () => {
+        trackEvent('article_share_click', { platform: 'facebook', slug: String(slug || '') });
         window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank', 'width=600,height=400');
       });
     }
 
     if (rdBtn) {
       rdBtn.addEventListener('click', () => {
+        trackEvent('article_share_click', { platform: 'reddit', slug: String(slug || '') });
         window.open(`https://reddit.com/submit?url=${encodeURIComponent(url)}&title=${title}`, '_blank', 'width=600,height=400');
       });
     }
@@ -244,6 +265,7 @@
     const waBtn = document.getElementById('sb-wa');
     if (waBtn) {
       waBtn.addEventListener('click', () => {
+        trackEvent('article_share_click', { platform: 'whatsapp', slug: String(slug || '') });
         window.open(`https://api.whatsapp.com/send?text=${title}%20${encodeURIComponent(url)}`, '_blank');
       });
     }
@@ -251,6 +273,7 @@
     const tgBtn = document.getElementById('sb-tg');
     if (tgBtn) {
       tgBtn.addEventListener('click', () => {
+        trackEvent('article_share_click', { platform: 'telegram', slug: String(slug || '') });
         window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${title}`, '_blank', 'width=600,height=400');
       });
     }
@@ -258,6 +281,7 @@
     const liBtn = document.getElementById('sb-li');
     if (liBtn) {
       liBtn.addEventListener('click', () => {
+        trackEvent('article_share_click', { platform: 'linkedin', slug: String(slug || '') });
         window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank', 'width=600,height=400');
       });
     }
@@ -265,6 +289,7 @@
     const emBtn = document.getElementById('sb-em');
     if (emBtn) {
       emBtn.addEventListener('click', () => {
+        trackEvent('article_share_click', { platform: 'email', slug: String(slug || '') });
         window.location.href = `mailto:?subject=${title}&body=Check%20out%20this%20hilarious%20satirical%20article:%20${encodeURIComponent(url)}`;
       });
     }
@@ -273,6 +298,7 @@
       cpBtn.addEventListener('click', async () => {
         try {
           await navigator.clipboard.writeText(url);
+          trackEvent('article_share_click', { platform: 'copy_link', slug: String(slug || '') });
           cpBtn.innerHTML = '<span style="font-size:14px;">✓ Copied!</span>';
           setTimeout(() => {
             cpBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
@@ -289,6 +315,7 @@
       nsBtn.style.display = 'flex';
       nsBtn.addEventListener('click', async () => {
         try {
+          trackEvent('article_share_click', { platform: 'native_share', slug: String(slug || '') });
           await navigator.share({
             title: article.title,
             text: article.excerpt,
@@ -443,8 +470,8 @@
       const label = getTrailLabel(item.created_at, now);
       const safeLabel = escapeHtml(label);
       const safeTitle = escapeHtml(item.title || 'Untitled roast');
-      const safeSlug = encodeURIComponent(item.slug || '');
-      return `<li><a href="/article?slug=${safeSlug}"><span class="topic-trail-chip">${safeLabel}</span><span class="topic-trail-link-title">${safeTitle}</span></a></li>`;
+      const rawSlug = String(item.slug || '').trim();
+      return `<li><a href="${getArticlePath(rawSlug)}"><span class="topic-trail-chip">${safeLabel}</span><span class="topic-trail-link-title">${safeTitle}</span></a></li>`;
     }).join('');
 
     section.style.display = 'block';
@@ -515,7 +542,7 @@
 
     return `
       <div class="article-card">
-        <a href="/article?slug=${encodeURIComponent(String(article.slug || ''))}">
+        <a href="${getArticlePath(String(article.slug || ''))}">
           <div class="card-image">
             <span class="card-category" style="background: ${escapeHtml(catColor)};">${safeCategory}</span>
             <span class="card-fiction-tag">Parody / Fiction</span>
@@ -555,7 +582,7 @@
     if (!schemaEl) return;
 
     const baseUrl = getPublicSiteUrl();
-    const articleUrl = `${baseUrl}/article?slug=${article.slug}`;
+    const articleUrl = getArticleUrl(article.slug);
 
     const schema = {
       "@context": "https://schema.org",
@@ -624,6 +651,11 @@
   function setMeta(id, content) {
     const el = document.getElementById(id);
     if (el) el.setAttribute('content', content);
+  }
+
+  function extractSlugFromPath() {
+    const match = window.location.pathname.match(/^\/article\/([^/?#]+)/i);
+    return match ? decodeURIComponent(match[1]) : null;
   }
 
   function showNotFound() {

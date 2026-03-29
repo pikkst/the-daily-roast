@@ -91,7 +91,7 @@ async function getRedditToken() {
 async function postToReddit(article, token) {
   if (!token) return false;
 
-  const url = `${SITE_URL}/article?slug=${article.slug}`;
+  const url = `${SITE_URL}/article/${encodeURIComponent(article.slug)}`;
   const flair = article.tags?.[0] ? `[${article.tags[0].toUpperCase()}]` : '[SATIRE]';
   const title = `${flair} ${article.title}`;
 
@@ -156,7 +156,7 @@ async function postToTwitter(article) {
     return false;
   }
 
-  const articleUrl = `${SITE_URL}/article?slug=${article.slug}`;
+  const articleUrl = `${SITE_URL}/article/${encodeURIComponent(article.slug)}`;
   const hashtags = (article.tags || []).slice(0, 3).map(t => `#${t.replace(/\s+/g, '')}`).join(' ');
   
   // Compose tweet text (max 280 chars)

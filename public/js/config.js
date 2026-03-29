@@ -129,6 +129,24 @@ function getPublicSiteUrl() {
   return raw ? raw.replace(/\/$/, '') : window.location.origin;
 }
 
+function getArticlePath(slug) {
+  const safe = encodeURIComponent(String(slug || '').trim());
+  return safe ? `/article/${safe}` : '/article';
+}
+
+function getArticleUrl(slug) {
+  return `${getPublicSiteUrl()}${getArticlePath(slug)}`;
+}
+
+function trackEvent(eventName, params) {
+  if (!eventName || typeof window.gtag !== 'function') return;
+  try {
+    window.gtag('event', eventName, params || {});
+  } catch (_) {
+    // Analytics is best-effort only.
+  }
+}
+
 // Shared: Disclaimer banner close
 document.addEventListener('DOMContentLoaded', () => {
   const closeBtn = document.getElementById('disclaimer-close');

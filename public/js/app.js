@@ -39,6 +39,7 @@
     loadTrending();
     setupReturningSupportPrompt();
     setupLoadMore();
+    setupArticleClickTracking();
   }
 
   function escapeHtml(value) {
@@ -290,6 +291,17 @@
     }
   }
 
+  function setupArticleClickTracking() {
+    document.addEventListener('click', (event) => {
+      const link = event.target.closest('a[href^="/article/"]');
+      if (!link) return;
+      trackEvent('article_click', {
+        link_path: link.getAttribute('href') || '',
+        page_path: window.location.pathname
+      });
+    });
+  }
+
   async function updateTicker() {
     const tickerEl = document.getElementById('ticker-content');
     if (!tickerEl) return;
@@ -306,7 +318,7 @@
 
       if (data && data.length > 0) {
         const headlines = data.map(a => 
-          `<a href="/article?slug=${safeSlug(a.slug)}" style="color:white;text-decoration:none;">${escapeHtml(a.title)}</a>`
+          `<a href="${getArticlePath(a.slug)}" style="color:white;text-decoration:none;">${escapeHtml(a.title)}</a>`
         ).join(' &nbsp;&nbsp;🔥&nbsp;&nbsp; ');
         tickerEl.innerHTML = `<span>${headlines}</span>`;
       }
@@ -432,7 +444,7 @@
           const safeCategoryName = escapeHtml(article.category_name || 'News');
           const catColor = article.category_color || '#e63946';
           return `
-            <a href="/article?slug=${safeSlug(article.slug)}" class="trending-item">
+            <a href="${getArticlePath(article.slug)}" class="trending-item">
               <span class="trending-rank">#${i + 1}</span>
               <div class="trending-info">
                 <span class="trending-category" style="color: ${escapeAttr(catColor)};">${getCategoryIcon(article.category_slug)} ${safeCategoryName}</span>
@@ -480,7 +492,7 @@
       if (itemsError || !items || items.length === 0) return;
 
       grid.innerHTML = items.map((item) => `
-        <a href="/article?slug=${safeSlug(item.article_slug)}" class="weekly-teaser-item">
+        <a href="${getArticlePath(item.article_slug)}" class="weekly-teaser-item">
           <div class="weekly-teaser-rank">#${item.rank}</div>
           <div class="weekly-teaser-info">
             <span class="weekly-teaser-cat">${getCategoryIcon(item.category_slug)} ${(item.category_slug || 'news').toUpperCase()}</span>
@@ -516,7 +528,7 @@
     const safeAlt = escapeAttr(article.image_alt || article.title);
 
     return `
-      <a href="/article?slug=${safeSlug(article.slug)}" class="featured-article" data-slug="${safeSlug(article.slug)}">
+      <a href="${getArticlePath(article.slug)}" class="featured-article" data-slug="${safeSlug(article.slug)}">
         <div class="featured-image">
           ${safeImage
             ? `<img src="${escapeAttr(safeImage)}" alt="${safeAlt}" loading="lazy">`
@@ -556,7 +568,7 @@
     const safeAlt = escapeAttr(article.image_alt || article.title);
 
     return `
-      <a href="/article?slug=${safeSlug(article.slug)}" class="roast-day-card">
+      <a href="${getArticlePath(article.slug)}" class="roast-day-card">
         <div class="roast-day-image">
           ${safeImage
             ? `<img src="${escapeAttr(safeImage)}" alt="${safeAlt}" loading="lazy">`
@@ -593,7 +605,7 @@
 
     return `
       <div class="article-card">
-        <a href="/article?slug=${safeSlug(article.slug)}">
+        <a href="${getArticlePath(article.slug)}">
           <div class="card-image">
             <span class="card-category" style="background: ${escapeAttr(catColor)};">${safeCategory}</span>
             <span class="card-fiction-tag">Parody / Fiction</span>

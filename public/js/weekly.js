@@ -57,7 +57,7 @@
 
   function renderTopCard(item) {
     return `
-      <a href="/article?slug=${encodeURIComponent(item.article_slug)}" class="weekly-top-card">
+      <a href="${getArticlePath(item.article_slug)}" class="weekly-top-card">
         <div class="weekly-top-badge">#1 OF THE WEEK</div>
         <h3 class="weekly-top-title">${item.title}</h3>
         <p class="weekly-top-excerpt">${item.excerpt || 'The most roasted story of the week.'}</p>
@@ -72,7 +72,7 @@
 
   function renderItem(item) {
     return `
-      <a href="/article?slug=${encodeURIComponent(item.article_slug)}" class="weekly-item">
+      <a href="${getArticlePath(item.article_slug)}" class="weekly-item">
         <div class="weekly-item-rank">#${item.rank}</div>
         <div class="weekly-item-main">
           <h4 class="weekly-item-title">${item.title}</h4>

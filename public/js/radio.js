@@ -418,6 +418,11 @@
       }
 
       await els.audio.play();
+      trackEvent('radio_play_start', {
+        broadcast_id: String(broadcast?.id || ''),
+        broadcast_title: String(broadcast?.title || ''),
+        page_path: window.location.pathname
+      });
       if (USE_CLIENT_BGM_OVERLAY && els.bgm.src) {
         els.bgm.play().catch(() => {});
       }
@@ -524,7 +529,7 @@
       const cards = playlistData.map((article, idx) => {
         const catIcon = CATEGORY_ICONS[article.category_slug] || '📰';
         const catColor = article.category_color || '#e63946';
-        return `<a href="/article?slug=${encodeURIComponent(article.slug)}" class="radio-playlist-item">
+        return `<a href="${getArticlePath(article.slug)}" class="radio-playlist-item">
           <span class="radio-playlist-index">${String(idx + 1).padStart(2, '0')}</span>
           <div class="radio-article-info">
             <span class="radio-article-cat" style="color:${catColor}">${catIcon} ${article.category_name}</span>
@@ -684,16 +689,20 @@
         const platform = btn.dataset.platform;
         switch (platform) {
           case 'twitter':
+            trackEvent('radio_share_click', { platform: 'x' });
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
             break;
           case 'facebook':
+            trackEvent('radio_share_click', { platform: 'facebook' });
             window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank');
             break;
           case 'reddit':
+            trackEvent('radio_share_click', { platform: 'reddit' });
             window.open(`https://reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle)}`, '_blank');
             break;
           case 'copy':
             navigator.clipboard.writeText(shareUrl).then(() => {
+              trackEvent('radio_share_click', { platform: 'copy_link' });
               btn.textContent = '✅';
               setTimeout(() => { btn.textContent = '🔗'; }, 2000);
             });

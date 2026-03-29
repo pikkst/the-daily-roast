@@ -26,6 +26,12 @@
     const tier = btn.dataset.tier;
     const amount = btn.dataset.amount;
 
+    trackEvent('donation_click', {
+      tier: String(tier || ''),
+      amount: String(amount || ''),
+      page_path: window.location.pathname
+    });
+
     // Method 1: Stripe Payment Links (simplest — just redirect)
     const paymentLink = CONFIG.STRIPE_PAYMENT_LINKS && CONFIG.STRIPE_PAYMENT_LINKS[tier];
     if (paymentLink) {
@@ -115,16 +121,19 @@
       if (error) {
         // Duplicate email
         if (error.code === '23505' || error.message.includes('duplicate')) {
+          trackEvent('newsletter_signup', { result: 'duplicate', page_path: window.location.pathname });
           showMessage(messageEl, 'You\'re already subscribed! 🎉', 'success');
         } else {
           throw error;
         }
       } else {
+        trackEvent('newsletter_signup', { result: 'success', page_path: window.location.pathname });
         showMessage(messageEl, 'Thanks for subscribing! 🔥📬', 'success');
         emailInput.value = '';
       }
     } catch (err) {
       console.error('Newsletter error:', err);
+      trackEvent('newsletter_signup', { result: 'error', page_path: window.location.pathname });
       showMessage(messageEl, 'Something went wrong. Please try again!', 'error');
     } finally {
       if (submitBtn) {
