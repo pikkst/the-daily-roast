@@ -268,6 +268,43 @@ function deduplicateHeadlines(headlines) {
   });
 }
 
+// ---------- Fetch Article Body Text From URL ----------
+
+/**
+ * Fetches the actual body text of an article URL.
+ * Non-blocking — returns empty string on any error.
+ * Strips HTML tags, collapses whitespace, and trims to maxChars.
+ */
+async function fetchArticleBodyText(url, maxChars = 700) {
+  if (!url || !url.startsWith('http')) return '';
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; TheDailyRoast/1.0)',
+        'Accept': 'text/html,application/xhtml+xml'
+      },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!response.ok) return '';
+    const html = await response.text();
+    // Remove script/style blocks entirely before stripping tags
+    const stripped = html
+      .replace(/<script[^>]*>.*?<\/script>/gsi, ' ')
+      .replace(/<style[^>]*>.*?<\/style>/gsi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim();
+    return stripped.length > maxChars ? stripped.slice(0, maxChars) + '…' : stripped;
+  } catch {
+    return '';
+  }
+}
+
 function cleanText(text) {
   return text
     .replace(/<[^>]*>/g, '')     // Remove HTML tags
@@ -565,10 +602,10 @@ async function fetchRecentCategoryTitles(db, categorySlug, limit = 3) {
 
 // ---------- Gemini AI Article Generation ----------
 
-async function generateSatiricalArticle(headline, recentTitles = [], retries = 3) {
+async function generateSatiricalArticle(headline, recentTitles = [], bodyText = '', retries = 3) {
   console.log(`    🤖 Step 1: Generating article text...`);
 
-  const prompt = buildPrompt(headline, recentTitles);
+  const prompt = buildPrompt(headline, recentTitles, bodyText);
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -651,16 +688,20 @@ async function generateSatiricalArticle(headline, recentTitles = [], retries = 3
   return null;
 }
 
-function buildPrompt(headline, recentTitles = []) {
+function buildPrompt(headline, recentTitles = [], bodyText = '') {
   const recentCoverageNote = recentTitles.length > 0
     ? `\nRECENT COVERAGE IN THIS CATEGORY (last 7 days — use for "what_changed" context):\n${recentTitles.map((t, i) => `${i + 1}. "${t}"`).join('\n')}\n`
+    : '';
+
+  const bodyNote = bodyText
+    ? `\nARTICLE BODY EXCERPT (from the source URL — use for factual grounding):\n${bodyText}\n`
     : '';
 
   return `You are a Pulitzer-worthy satirical journalist for "The Daily Roast" — the internet's sharpest humor news publication, in the tradition of The Onion, The Babylon Bee, Waterford Whispers, and The Daily Mash. Your articles are so well-crafted that readers share them with "IS THIS REAL?!" — and then burst out laughing.
 
 REAL NEWS HEADLINE TO SATIRIZE:
 "${headline.title}"
-${headline.description ? `Context: ${headline.description}` : ''}${recentCoverageNote}
+${headline.description ? `Context: ${headline.description}` : ''}${bodyNote}${recentCoverageNote}
 
 YOUR TASK: Write a FULL-LENGTH, publication-ready satirical news article. Not a summary — a complete, detailed, immersive piece that rewards every second of reading.
 
@@ -1080,7 +1121,9 @@ async function main() {
 
     // ── Step 1: Generate article text ──
     const recentTitles = await fetchRecentCategoryTitles(db, headline.guessedCategory);
-    const article = await generateSatiricalArticle(headline, recentTitles);
+    const bodyText = headline.link ? await fetchArticleBodyText(headline.link) : '';
+    if (bodyText) console.log(`    🌐 Fetched ${bodyText.length} chars from source URL`);
+    const article = await generateSatiricalArticle(headline, recentTitles, bodyText);
     
     if (!article) {
       console.log(`    ❌ Skipping — text generation failed.`);
