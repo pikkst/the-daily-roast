@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="js/analytics-consent.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About - The Daily Roast</title>
+  <meta name="description" content="About The Daily Roast: who we are, how satire is made, and our editorial principles.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800;900&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#dc3545">
+</head>
+<body>
+  <header class="site-header site-header--compact">
+    <div class="container">
+      <div class="header-brand">
+        <a href="/" class="logo">
+          <span class="logo-icon">🔥</span>
+          <div class="logo-text">
+            <h1 class="logo-title logo-title--small">The Daily Roast</h1>
+          </div>
+        </a>
+        <div class="header-links">
+          <a href="/" class="back-link">← Back to Headlines</a>
+          <a href="radio.html" class="back-link">📻 Radio</a>
+          <a href="contact.html" class="back-link">Contact</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="site-main">
+    <div class="container info-page">
+      <div class="weekly-page-hero">
+        <p class="weekly-page-kicker">ABOUT</p>
+        <h2 class="weekly-page-title">Who We Are</h2>
+        <p class="weekly-page-subtitle">The Daily Roast is an AI-assisted satire platform. We turn real headline context into parody content for entertainment.</p>
+      </div>
+
+      <section class="info-section">
+        <h3>What We Publish</h3>
+        <p>We publish satirical stories, radio-style parody episodes, weekly recap lists, and playful quiz content. Everything is clearly framed as fiction and parody.</p>
+      </section>
+
+      <section class="info-section">
+        <h3>How It Is Made</h3>
+        <ul class="info-list">
+          <li>We gather headline context from current events.</li>
+          <li>AI helps generate draft text and media assets.</li>
+          <li>Pipelines run on schedule for daily publishing.</li>
+          <li>Outputs are checked against parody/disclaimer guardrails.</li>
+        </ul>
+      </section>
+
+      <section class="info-section">
+        <h3>Editorial Guardrails</h3>
+        <ul class="info-list">
+          <li>Clarity first: jokes should still be understandable.</li>
+          <li>Punch up: satire targets systems, hypocrisy, and absurdity.</li>
+          <li>Transparency: content is labeled fictional/parody.</li>
+          <li>Continuous improvement from user feedback.</li>
+        </ul>
+      </section>
+
+      <section class="info-section">
+        <h3>Need To Reach Us?</h3>
+        <p>If you have questions, corrections, or partnership ideas, use our contact page.</p>
+        <p><a href="contact.html" class="btn btn-outline">Open Contact Page</a></p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <div class="footer-disclaimer">
+          <p><strong>⚠️ Disclaimer:</strong> The Daily Roast is a <strong>satirical and parody</strong> publication. All stories are fictional and AI-generated.</p>
+        </div>
+        <p class="footer-copy">&copy; <span id="footer-year"></span> The Daily Roast. Powered by AI, fueled by absurdity. <a href="https://www.youtube.com/channel/UC2EbJVd4HuxKgNt58VXPpDw" target="_blank" rel="noopener noreferrer">YouTube Channel</a> · <a href="about.html">About</a> · <a href="contact.html">Contact</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script>
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>

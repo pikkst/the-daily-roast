@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="js/analytics-consent.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📻 Daily Roast Radio — The Daily Roast</title>
+  <meta name="description" content="Real headlines. Unreal satire. Daily parody radio.">
+  <meta name="robots" content="index, follow">
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="📻 Daily Roast Radio — AI Comedy Broadcast">
+  <meta property="og:description" content="Real headlines. Unreal satire. Daily parody radio.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://picsum.photos/seed/daily-roast-radio/1200/630">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="📻 Daily Roast Radio">
+  <meta name="twitter:description" content="Real headlines. Unreal satire. Daily parody radio.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/style.css">
+  
+  <!-- Favicon & PWA -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
+  <link rel="manifest" href="/manifest-radio.json">
+  <meta name="theme-color" content="#dc3545">
+</head>
+<body class="radio-page">
+  <!-- Header -->
+  <header class="site-header site-header--compact">
+    <div class="container">
+      <div class="header-brand">
+        <a href="/" class="logo">
+          <span class="logo-icon">🔥</span>
+          <div class="logo-text">
+            <h1 class="logo-title logo-title--small">The Daily Roast</h1>
+          </div>
+        </a>
+        <div class="header-links">
+          <a href="/" class="back-link">← Back to Headlines</a>
+          <a href="quiz.html" class="back-link">🎮 Quiz</a>
+          <a href="about.html" class="back-link">About</a>
+          <a href="contact.html" class="back-link">Contact</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Radio Main -->
+  <main class="site-main radio-main">
+    <div class="container">
+
+      <!-- Radio Hero -->
+      <section class="radio-hero">
+        <div class="radio-hero-bg">
+          <div class="radio-hero-gradient"></div>
+        </div>
+        <div class="radio-hero-content">
+          <div class="radio-badge">
+            <span class="radio-badge-dot"></span>
+            <span>DAILY ROAST RADIO</span>
+          </div>
+          <h1 class="radio-title" id="radio-title">Loading today's broadcast...</h1>
+          <p class="radio-fiction-badge">Parody / Fiction Broadcast</p>
+          <p class="radio-date" id="radio-date"></p>
+          
+          <!-- Cover Image -->
+          <div class="radio-cover" id="radio-cover" style="display:none;">
+            <img id="radio-cover-img" src="" alt="Broadcast cover art">
+          </div>
+
+          <!-- Category Pills -->
+          <div class="radio-categories" id="radio-categories"></div>
+          <!-- Weekly Saga Banner -->
+          <div class="radio-weekly-saga" id="radio-weekly-saga" style="display:none;">
+            <span class="radio-weekly-saga-label">📺 This Week&apos;s Saga</span>
+            <span class="radio-weekly-saga-text" id="radio-weekly-saga-text"></span>
+          </div>
+
+          <!-- Intensive Day Leaderboard -->
+          <div class="radio-intensive-bar" id="radio-intensive-bar" style="display:none;">
+            <span class="radio-intensive-badge">⚡ HIGH-NEWS DAY</span>
+            <span class="radio-intensive-count" id="radio-intensive-count"></span>
+            <div class="radio-intensive-cats" id="radio-intensive-cats"></div>
+          </div>
+
+          <p class="radio-intro" id="radio-intro">Daily comedy bulletin with hosts Joe & Jane.</p>
+          <div class="radio-schedule" id="radio-schedule">
+            <p class="radio-schedule-times">New broadcasts usually: 09:00, 15:00, 21:00 (Tallinn time)</p>
+            <p class="radio-next-countdown" id="radio-next-countdown">Next broadcast in --:--:--</p>
+            <p class="radio-launch-teaser" id="radio-launch-teaser">Teaser updates start 10 minutes before launch.</p>
+            <p class="radio-pipeline-status" id="radio-pipeline-status">Published</p>
+          </div>
+          <div class="radio-install" id="radio-install-wrap" style="display:none;">
+            <button class="radio-install-btn" id="radio-install-btn" type="button">Install Radio App</button>
+            <p class="radio-install-hint" id="radio-install-hint">Install this radio as an app for quick launch from your home screen.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Player Section -->
+      <section class="radio-player-section" id="radio-player-section" style="display:none;">
+        <div class="radio-player">
+          <!-- Visualizer -->
+          <div class="radio-visualizer" id="radio-visualizer">
+            <canvas id="radio-canvas" width="800" height="120"></canvas>
+          </div>
+
+          <!-- Controls -->
+          <div class="radio-controls">
+            <div class="radio-controls-left">
+              <button class="radio-play-btn" id="radio-play-btn" title="Play/Pause">
+                <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+                  <polygon points="5,3 19,12 5,21" />
+                </svg>
+                <svg id="pause-icon" viewBox="0 0 24 24" fill="currentColor" width="32" height="32" style="display:none;">
+                  <rect x="5" y="3" width="4" height="18"/><rect x="15" y="3" width="4" height="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="radio-controls-center">
+              <div class="radio-progress-wrap">
+                <span class="radio-time" id="radio-time-current">0:00</span>
+                <div class="radio-progress-bar" id="radio-progress-bar">
+                  <div class="radio-progress-fill" id="radio-progress-fill"></div>
+                  <input type="range" class="radio-progress-input" id="radio-progress-input" min="0" max="100" value="0">
+                </div>
+                <span class="radio-time" id="radio-time-total">0:00</span>
+              </div>
+              <div class="radio-now-speaking" id="radio-now-speaking">
+                <span class="radio-speaker-indicator"></span>
+                <span id="radio-speaker-name">Ready to play</span>
+              </div>
+            </div>
+            <div class="radio-controls-right">
+              <div class="radio-volume-wrap">
+                <button class="radio-vol-btn" id="radio-vol-btn" title="Volume">🔊</button>
+                <input type="range" class="radio-volume-slider" id="radio-volume" min="0" max="100" value="80">
+              </div>
+              <div class="radio-bgm-wrap">
+                <label class="radio-bgm-label">
+                  <span>BGM</span>
+                  <input type="range" class="radio-bgm-slider" id="radio-bgm-volume" min="0" max="100" value="25">
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Share Bar -->
+        <div class="radio-share">
+          <span class="radio-share-label">Share this broadcast:</span>
+          <a class="radio-share-btn radio-share-btn--download" id="radio-download-btn" title="Download clip" href="#" download>⬇</a>
+          <button class="radio-share-btn" data-platform="twitter" title="Share on X">𝕏</button>
+          <button class="radio-share-btn" data-platform="facebook" title="Share on Facebook">f</button>
+          <button class="radio-share-btn" data-platform="reddit" title="Share on Reddit">r</button>
+          <button class="radio-share-btn" data-platform="copy" title="Copy link">🔗</button>
+        </div>
+      </section>
+
+      <!-- Broadcast Archive -->
+      <section class="radio-archive" id="radio-archive-section" style="display:none;">
+        <h2 class="radio-archive-title">📚 Recent Broadcasts</h2>
+        <div class="radio-archive-list" id="radio-archive-list"></div>
+      </section>
+
+      <!-- No Broadcast State -->
+      <section class="radio-empty" id="radio-empty" style="display:none;">
+        <div class="radio-empty-icon">📻</div>
+        <h2>No Broadcast Available Yet</h2>
+        <p>Our AI hosts Joe & Jane are preparing today's show. Check back soon!</p>
+        <a href="/" class="btn btn-primary">← Read Today's Articles</a>
+      </section>
+
+      <!-- Loading State -->
+      <section class="radio-loading" id="radio-loading">
+        <div class="radio-loading-spinner"></div>
+        <p>Tuning in to today's broadcast...</p>
+      </section>
+
+      <!-- Articles Used Section -->
+      <section class="radio-articles" id="radio-articles-section" style="display:none;">
+        <h2 class="radio-articles-title">🎵 Today&apos;s Playlist</h2>
+        <div class="radio-articles-grid" id="radio-articles-grid"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <div class="footer-disclaimer">
+          <p><strong>⚠️ Disclaimer:</strong> The Daily Roast Radio is a <strong>satirical comedy broadcast</strong>. All content is <strong>fictional</strong> and AI-generated. Not real journalism. Not real radio. But real funny.</p>
+        </div>
+        <p class="footer-copy">&copy; <span id="footer-year"></span> The Daily Roast. Powered by AI, fueled by absurdity. <a href="https://www.youtube.com/channel/UC2EbJVd4HuxKgNt58VXPpDw" target="_blank" rel="noopener noreferrer">YouTube Channel</a> · <a href="about.html">About</a> · <a href="contact.html">Contact</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Audio Elements (hidden) -->
+  <audio id="radio-audio" preload="none"></audio>
+  <audio id="radio-bgm" preload="none" loop></audio>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/radio.js"></script>
+  <script>
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

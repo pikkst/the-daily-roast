@@ -1,0 +1,142 @@
+name: Intensive Day Mode
+
+on:
+  workflow_dispatch:
+    inputs:
+      episode_count:
+        description: 'Number of flash episodes to generate (2–6)'
+        required: false
+        type: choice
+        default: '3'
+        options:
+          - '2'
+          - '3'
+          - '4'
+          - '5'
+          - '6'
+      reason:
+        description: 'Optional: why is today a high-news day? (fed into prompt context)'
+        required: false
+        type: string
+        default: ''
+      script_min_lines:
+        description: 'Min script lines per flash episode (shorter = faster + punchier)'
+        required: false
+        type: choice
+        default: '40'
+        options:
+          - '35'
+          - '40'
+          - '50'
+          - '60'
+      script_max_lines:
+        description: 'Max script lines per flash episode'
+        required: false
+        type: choice
+        default: '60'
+        options:
+          - '50'
+          - '60'
+          - '70'
+          - '80'
+      skip_youtube:
+        description: 'Skip YouTube upload for flash episodes'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: intensive-day-mode
+  cancel-in-progress: false
+
+jobs:
+  intensive-burst:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install ffmpeg
+        run: sudo apt-get install -y ffmpeg
+
+      - name: Run flash episodes sequentially
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # Flash format settings
+          BROADCAST_FORMAT: flash
+          ENFORCE_TALLINN_SLOT_TIME: '0'
+          FORCE_REPLACE_EDITION: '0'
+          ENABLE_EXTERNAL_RESEARCH: '0'
+          SKIP_COVER_IMAGE: '1'
+          REUSE_RECENT_COVER: '1'
+          SCRIPT_MIN_LINES: ${{ github.event.inputs.script_min_lines || '40' }}
+          SCRIPT_MAX_LINES: ${{ github.event.inputs.script_max_lines || '60' }}
+          EPISODE_COUNT: ${{ github.event.inputs.episode_count || '3' }}
+          INTENSIVE_REASON: ${{ github.event.inputs.reason || '' }}
+          # Listener punchlines (keep on for community feel)
+          ENABLE_LISTENER_PUNCHLINES: '1'
+          LISTENER_PUNCHLINE_LOOKBACK_HOURS: '24'
+          LISTENER_PUNCHLINE_MAX_ITEMS: '3'
+          # Promo
+          PROMO_MODE: ${{ vars.PROMO_MODE || 'platform' }}
+          PLATFORM_PROMO_BRIEF: ${{ vars.PLATFORM_PROMO_BRIEF || '' }}
+          # Podbean
+          ENABLE_PODBEAN: ${{ vars.ENABLE_PODBEAN || '0' }}
+          PODBEAN_CLIENT_ID: ${{ secrets.PODBEAN_CLIENT_ID }}
+          PODBEAN_CLIENT_SECRET: ${{ secrets.PODBEAN_CLIENT_SECRET }}
+          # BGM
+          BGM_VOLUME: ${{ vars.BGM_VOLUME || '0.02' }}
+        run: |
+          echo "⚡ INTENSIVE DAY MODE"
+          echo "📰 Reason: ${INTENSIVE_REASON:-not specified}"
+          echo "🎙️  Episodes to generate: $EPISODE_COUNT"
+          echo "📝 Script budget: $SCRIPT_MIN_LINES–$SCRIPT_MAX_LINES lines"
+          echo ""
+
+          for i in $(seq 1 "$EPISODE_COUNT"); do
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "⚡ Flash episode $i / $EPISODE_COUNT"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            BROADCAST_SLOT="flash-$i" \
+            INTENSIVE_EPISODE_INDEX="$i" \
+            INTENSIVE_EPISODE_TOTAL="$EPISODE_COUNT" \
+            node scripts/generate-broadcast.mjs || echo "⚠️  Episode $i failed, continuing..."
+
+            # Short cooldown between episodes to respect API rate limits
+            if [ "$i" -lt "$EPISODE_COUNT" ]; then
+              echo "⏳ Cooldown 30s before next episode..."
+              sleep 30
+            fi
+          done
+
+          echo ""
+          echo "✅ Intensive day burst complete — $EPISODE_COUNT flash episodes generated"
+
+      - name: Upload latest flash to YouTube
+        if: ${{ github.event.inputs.skip_youtube != 'true' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SITE_URL: ${{ secrets.SITE_URL || 'https://thedailyroast.online' }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          YT_PRIVACY_STATUS: ${{ vars.YT_PRIVACY_STATUS || 'public' }}
+          YT_PODCAST_PLAYLIST_ID: ${{ vars.YT_PODCAST_PLAYLIST_ID || '' }}
+        run: |
+          echo "🎬 Uploading latest flash episode to YouTube..."
+          node scripts/upload-latest-broadcast-youtube.mjs

@@ -1,0 +1,56 @@
+name: Auto-Reply to AI Comments
+
+on:
+  # Runs every 6 hours to catch new comments
+  schedule:
+    - cron: '0 */6 * * *'
+  # Allow manual trigger with optional dry-run
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (log replies but do not insert)'
+        type: boolean
+        default: false
+      lookback_hours:
+        description: 'How far back to scan comments (hours, default 48)'
+        type: string
+        default: '48'
+      max_per_run:
+        description: 'Max replies to post per run (default 10)'
+        type: string
+        default: '10'
+
+jobs:
+  reply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run AI comment auto-responder
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          REPLY_AUTHOR_NAME: ${{ secrets.REPLY_AUTHOR_NAME || vars.REPLY_AUTHOR_NAME || 'The Daily Roast 🎙️' }}
+          REPLY_LOOKBACK_HOURS: ${{ github.event.inputs.lookback_hours || secrets.REPLY_LOOKBACK_HOURS || vars.REPLY_LOOKBACK_HOURS || '48' }}
+          REPLY_MAX_PER_RUN: ${{ github.event.inputs.max_per_run || secrets.REPLY_MAX_PER_RUN || vars.REPLY_MAX_PER_RUN || '10' }}
+          DRY_RUN: ${{ (inputs.dry_run == true || github.event.inputs.dry_run == 'true') && '1' || '0' }}
+        run: |
+          echo "💬 Running AI comment auto-responder..."
+          node scripts/auto-reply-comments.mjs
+
+      - name: Report status
+        if: always()
+        run: echo "✅ Auto-reply run finished at $(date -u)"

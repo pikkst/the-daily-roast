@@ -1,0 +1,116 @@
+name: Daily Roast Pipeline
+
+on:
+  # Run once per day at Tallinn midnight (00:00).
+  # Cron is UTC, so we include both seasonal UTC variants and gate in-job.
+  schedule:
+    - cron: '0 21 * * *'
+    - cron: '0 22 * * *'
+
+  # Manual trigger from GitHub Actions tab
+  workflow_dispatch:
+    inputs:
+      article_count:
+        description: 'Number of articles (0 = all found topics)'
+        required: false
+        default: '0'
+      clean_first:
+        description: 'Delete existing articles before generating?'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  generate-articles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180  # 3 hours max for all articles
+    outputs:
+      should_run: ${{ steps.slot_check.outputs.should_run }}
+
+    steps:
+      - name: Check Tallinn midnight window
+        id: slot_check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "🧪 Manual run: midnight gate bypassed"
+            exit 0
+          fi
+
+          tallinn_hh="$(TZ=Europe/Tallinn date +%H)"
+          tallinn_hhmm="$(TZ=Europe/Tallinn date +%H:%M)"
+          if [ "$tallinn_hh" = "00" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Tallinn midnight hour matched: $tallinn_hh (current: $tallinn_hhmm)"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "⏭️ Tallinn midnight hour not matched ($tallinn_hhmm), skipping heavy jobs"
+          fi
+
+      - name: Checkout repository
+        if: steps.slot_check.outputs.should_run == 'true'
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        if: steps.slot_check.outputs.should_run == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.slot_check.outputs.should_run == 'true'
+        run: npm ci
+
+      - name: Generate satirical articles
+        if: steps.slot_check.outputs.should_run == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ARTICLES_COUNT: ${{ github.event.inputs.article_count || '0' }}
+        run: |
+          if [ "${{ github.event.inputs.clean_first }}" = "true" ]; then
+            echo "🧹 Clean mode — deleting old articles first"
+            node scripts/clean-and-generate.mjs
+          else
+            echo "➕ Incremental mode — adding new topics, keeping old articles"
+            node scripts/generate-articles.mjs
+          fi
+
+      - name: Report status
+        if: always()
+        run: |
+          echo "⏱️ Midnight gate: ${{ steps.slot_check.outputs.should_run }}"
+          echo "📅 Generation completed at $(date -u)"
+          echo "🔥 The Daily Roast content pipeline finished"
+
+  lock-roast-of-the-day:
+    needs: generate-articles
+    if: needs.generate-articles.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lock Roast of the Day snapshot
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/lock-roast-of-the-day.mjs
+
+      - name: Report lock status
+        if: always()
+        run: |
+          echo "📅 Roast of the Day lock completed at $(date -u)"

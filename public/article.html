@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="js/analytics-consent.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google-site-verification" content="oW940KQ6yahC23HlNueGViWBwSEkRpN1wBoypdD6CJ0">
+  <title id="page-title">Loading... — The Daily Roast</title>
+  <meta name="description" id="page-description" content="Satirical news article from The Daily Roast">
+  <meta name="robots" content="index, follow">
+  
+  <!-- Open Graph (dynamically updated) -->
+  <meta property="og:title" id="og-title" content="The Daily Roast">
+  <meta property="og:description" id="og-description" content="Satirical news article">
+  <meta property="og:type" content="article">
+  <meta property="og:image" id="og-image" content="">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" id="tw-title" content="The Daily Roast">
+  <meta name="twitter:description" id="tw-description" content="">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800;900&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/style.css">
+  
+  <!-- Favicon & PWA -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#dc3545">
+  <link rel="apple-touch-icon" href="/icons/icon-192.svg">
+</head>
+<body class="article-page">
+  <!-- Satire Disclaimer Banner -->
+  <div class="disclaimer-bar" id="disclaimer-bar">
+    <div class="container">
+      <span>⚠️ <strong>SATIRE & PARODY</strong> — This article is fictional, AI-generated humor inspired by real headlines. Nothing here is real journalism.</span>
+      <button class="disclaimer-close" id="disclaimer-close" aria-label="Close disclaimer">✕</button>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="site-header site-header--compact">
+    <div class="container">
+      <div class="header-brand">
+        <a href="/" class="logo">
+          <span class="logo-icon">🔥</span>
+          <div class="logo-text">
+            <h1 class="logo-title logo-title--small">The Daily Roast</h1>
+          </div>
+        </a>
+        <div class="header-links">
+          <a href="/" class="back-link">← Back to Headlines</a>
+          <a href="quiz.html" class="back-link">🎮 Quiz</a>
+          <a href="about.html" class="back-link">About</a>
+          <a href="contact.html" class="back-link">Contact</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Article Content -->
+  <main class="site-main">
+    <article class="article-full" id="article-full">
+      
+      <!-- Loading State -->
+      <div class="article-loading" id="article-loading">
+        <div class="container container--narrow">
+          <div class="skeleton-loading">
+            <div class="skeleton-line w40" style="height: 20px; margin-bottom: 16px;"></div>
+            <div class="skeleton-line w90" style="height: 40px; margin-bottom: 8px;"></div>
+            <div class="skeleton-line w70" style="height: 40px; margin-bottom: 24px;"></div>
+            <div class="skeleton-line w30" style="height: 16px; margin-bottom: 40px;"></div>
+            <div class="skeleton-line w100" style="height: 300px; margin-bottom: 32px; border-radius: 12px;"></div>
+            <div class="skeleton-line w100" style="height: 16px; margin-bottom: 12px;"></div>
+            <div class="skeleton-line w90" style="height: 16px; margin-bottom: 12px;"></div>
+            <div class="skeleton-line w95" style="height: 16px; margin-bottom: 12px;"></div>
+            <div class="skeleton-line w80" style="height: 16px; margin-bottom: 12px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Article Header -->
+      <div class="article-header" id="article-header" style="display:none;">
+        <div class="container container--narrow">
+          <div class="article-meta-top">
+            <a href="/" class="article-category" id="article-category">Category</a>
+            <span class="article-fiction-badge">Parody / Fiction</span>
+            <span class="article-date" id="article-date"></span>
+          </div>
+          <h1 class="article-title" id="article-title"></h1>
+          <p class="article-excerpt" id="article-excerpt"></p>
+          <div class="article-byline">
+            <div class="byline-avatar" id="byline-avatar">AI</div>
+            <div class="byline-info">
+              <span class="byline-author" id="article-author"></span>
+              <span class="byline-detail"><span id="article-reading-time">3</span> min read • <span id="article-views">0</span> views</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Article Image -->
+      <div class="article-image-wrap" id="article-image-wrap" style="display:none;">
+        <div class="container container--narrow">
+          <div class="article-hero-image">
+            <img id="article-image" src="" alt="" loading="lazy">
+          </div>
+        </div>
+      </div>
+
+      <!-- Article Body -->
+      <div class="article-body" id="article-body-wrap" style="display:none;">
+        <div class="container container--narrow">
+          
+          <!-- Satire Notice -->
+          <div class="satire-notice">
+            <span class="satire-icon">🎭</span>
+            <p><strong>Satire Notice:</strong> This article is entirely fictional and written by AI for humor purposes. Any resemblance to real events is used purely as comedic inspiration.</p>
+          </div>
+
+          <div class="article-content" id="article-content">
+          </div>
+
+          <!-- Tags -->
+          <div class="article-tags" id="article-tags"></div>
+
+          <!-- Send to Friends -->
+          <div class="roast-send" id="roast-send">
+            <span class="send-label">📤 Share this roast:</span>
+            <div class="send-options">
+              <button class="send-btn send-btn--xbird" id="sb-tw" title="X">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                <span class="send-btn-label">X</span>
+              </button>
+              <button class="send-btn send-btn--fbook" id="sb-fb" title="Facebook">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                <span class="send-btn-label">Facebook</span>
+              </button>
+              <button class="send-btn send-btn--rdit" id="sb-rd" title="Reddit">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/></svg>
+                <span class="send-btn-label">Reddit</span>
+              </button>
+              <button class="send-btn send-btn--wapp" id="sb-wa" title="WhatsApp">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                <span class="send-btn-label">WhatsApp</span>
+              </button>
+              <button class="send-btn send-btn--tgram" id="sb-tg" title="Telegram">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                <span class="send-btn-label">Telegram</span>
+              </button>
+              <button class="send-btn send-btn--lnkd" id="sb-li" title="LinkedIn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                <span class="send-btn-label">LinkedIn</span>
+              </button>
+              <button class="send-btn send-btn--mail" id="sb-em" title="Email">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+                <span class="send-btn-label">Email</span>
+              </button>
+              <button class="send-btn send-btn--clip" id="sb-cp" title="Copy link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span class="send-btn-label">Copy</span>
+              </button>
+              <button class="send-btn send-btn--More" id="sb-ns" title="More" style="display:none;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                <span class="send-btn-label">More</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Reaction Buttons -->
+          <div class="article-reactions" id="article-reactions" style="display:none;">
+            <span class="reactions-label">How'd this roast hit? 🎯</span>
+            <div class="reaction-buttons" id="reaction-buttons">
+              <button class="reaction-btn" data-type="fire" aria-label="Fire">
+                <span class="reaction-emoji">🔥</span>
+                <span class="reaction-label-text">Fire</span>
+                <span class="reaction-count" id="count-fire">0</span>
+              </button>
+              <button class="reaction-btn" data-type="skull" aria-label="I'm Dead">
+                <span class="reaction-emoji">💀</span>
+                <span class="reaction-label-text">Dead</span>
+                <span class="reaction-count" id="count-skull">0</span>
+              </button>
+              <button class="reaction-btn" data-type="laugh" aria-label="Hilarious">
+                <span class="reaction-emoji">🤣</span>
+                <span class="reaction-label-text">LOL</span>
+                <span class="reaction-count" id="count-laugh">0</span>
+              </button>
+              <button class="reaction-btn" data-type="shock" aria-label="Shocking">
+                <span class="reaction-emoji">😱</span>
+                <span class="reaction-label-text">Shock</span>
+                <span class="reaction-count" id="count-shock">0</span>
+              </button>
+              <button class="reaction-btn" data-type="cap" aria-label="Cap / No way">
+                <span class="reaction-emoji">🧢</span>
+                <span class="reaction-label-text">Cap</span>
+                <span class="reaction-count" id="count-cap">0</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Comments Section -->
+          <div class="comments-section" id="comments-section" style="display:none;">
+            <div class="comments-header">
+              <h3 class="comments-title">💬 Roast Reviews <span class="comments-count" id="comments-count">(0)</span></h3>
+            </div>
+            
+            <!-- New Comment Form -->
+            <div class="comment-form-wrap">
+              <form class="comment-form" id="comment-form">
+                <div class="comment-form-row">
+                  <input type="text" class="comment-name-input" id="comment-name" placeholder="Your name (optional)" maxlength="50" autocomplete="name">
+                </div>
+                <div class="comment-form-row">
+                  <textarea class="comment-textarea" id="comment-text" placeholder="Drop your hottest take..." maxlength="1000" rows="3" required></textarea>
+                </div>
+                <div class="comment-form-actions">
+                  <span class="comment-char-count" id="comment-char-count">0/1000</span>
+                  <button type="submit" class="comment-submit-btn" id="comment-submit">
+                    <span class="comment-submit-text">Post Comment</span>
+                    <span class="comment-submit-loading" style="display:none;">Posting...</span>
+                  </button>
+                </div>
+                <div class="comment-form-message" id="comment-form-message" style="display:none;"></div>
+              </form>
+            </div>
+
+            <!-- Comments List -->
+            <div class="comments-list" id="comments-list">
+              <div class="comments-loading" id="comments-loading">Loading comments...</div>
+              <div class="comments-empty" id="comments-empty" style="display:none;">
+                <p>No comments yet. Be the first to roast the roast! 🔥</p>
+              </div>
+            </div>
+
+            <!-- Load More Comments -->
+            <div class="comments-load-more" id="comments-load-more" style="display:none;">
+              <button class="btn btn-outline btn-sm" id="load-more-comments">Load More Comments</button>
+            </div>
+          </div>
+
+          <!-- Support & Newsletter -->
+          <div class="support-section" id="support-section">
+            <!-- Donation -->
+            <div class="donation-card">
+              <div class="donation-icon">☕</div>
+              <h3 class="donation-title">Enjoying The Daily Roast?</h3>
+              <p class="donation-desc">Our AI does the writing, but servers and AI cost real money. Support us with a monthly donation!</p>
+              <div class="donation-tiers">
+                <button class="donation-btn" data-tier="monthly_2" data-amount="2">
+                  <span class="donation-amount">€2</span>
+                  <span class="donation-period">/mo</span>
+                  <span class="donation-label">Coffee ☕</span>
+                </button>
+                <button class="donation-btn donation-btn--popular" data-tier="monthly_5" data-amount="5">
+                  <span class="donation-popular-badge">Popular</span>
+                  <span class="donation-amount">€5</span>
+                  <span class="donation-period">/mo</span>
+                  <span class="donation-label">Lunch 🍕</span>
+                </button>
+                <button class="donation-btn" data-tier="monthly_10" data-amount="10">
+                  <span class="donation-amount">€10</span>
+                  <span class="donation-period">/mo</span>
+                  <span class="donation-label">Party 🎉</span>
+                </button>
+              </div>
+              <p class="donation-footnote">Secure payment via Stripe. Cancel anytime.</p>
+            </div>
+
+            <!-- Newsletter -->
+            <div class="newsletter-card">
+              <div class="newsletter-icon">📬</div>
+              <h3 class="newsletter-title">Newsletter</h3>
+              <p class="newsletter-desc">Get the best roasts delivered to your inbox! Once a week, only the finest burns.</p>
+              <form class="newsletter-form" id="newsletter-form">
+                <div class="newsletter-input-wrap">
+                  <input type="email" id="newsletter-email" class="newsletter-input" placeholder="your@email.com" required autocomplete="email">
+                  <button type="submit" class="newsletter-submit" id="newsletter-submit">
+                    <span class="newsletter-submit-text">Subscribe</span>
+                    <span class="newsletter-submit-loading" style="display:none;">⏳</span>
+                  </button>
+                </div>
+                <div class="newsletter-message" id="newsletter-message" style="display:none;"></div>
+              </form>
+              <p class="newsletter-footnote">No spam. Unsubscribe anytime.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Topic Trail -->
+      <div class="topic-trail" id="topic-trail-section" style="display:none;">
+        <div class="container container--narrow">
+          <h3 class="topic-trail-title">Stay On This Storyline</h3>
+          <p class="topic-trail-subtitle">Follow the same theme from earlier roasts, then catch the live recap.</p>
+          <ul class="topic-trail-list" id="topic-trail-list"></ul>
+          <a class="topic-trail-radio-link" href="/radio">Tune into today&apos;s radio roast</a>
+        </div>
+      </div>
+
+      <!-- Related Articles -->
+      <div class="related-section" id="related-section" style="display:none;">
+        <div class="container">
+          <div class="section-header">
+            <h2 class="section-title">More Roasts</h2>
+            <div class="section-line"></div>
+          </div>
+          <div class="articles-grid articles-grid--related" id="related-grid">
+          </div>
+        </div>
+      </div>
+
+      <!-- 404 State -->
+      <div class="article-not-found" id="article-not-found" style="display:none;">
+        <div class="container container--narrow" style="text-align:center; padding: 80px 20px;">
+          <span style="font-size: 80px;">🔥</span>
+          <h2>This roast got burned to a crisp</h2>
+          <p style="color: var(--text-secondary); margin: 16px 0 32px;">The article you're looking for doesn't exist or has been removed.</p>
+          <a href="/" class="btn btn-primary">Back to Headlines</a>
+        </div>
+      </div>
+
+    </article>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <div class="footer-disclaimer">
+          <p><strong>⚠️ Disclaimer:</strong> The Daily Roast is a <strong>satirical and parody</strong> publication. All articles are <strong>entirely fictional</strong> and generated by AI. Any resemblance to actual events is used purely as inspiration for comedy.</p>
+        </div>
+        <p class="footer-copy">&copy; <span id="footer-year"></span> The Daily Roast. Powered by AI, fueled by absurdity. <a href="https://www.youtube.com/channel/UC2EbJVd4HuxKgNt58VXPpDw" target="_blank" rel="noopener noreferrer">YouTube Channel</a> · <a href="about.html">About</a> · <a href="contact.html">Contact</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Schema.org Article structured data (populated by JS) -->
+  <script type="application/ld+json" id="article-schema">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "publisher": {
+      "@type": "Organization",
+      "name": "The Daily Roast"
+    }
+  }
+  </script>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/article.js"></script>
+  <script src="js/support.js"></script>
+  <script src="js/comments.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>

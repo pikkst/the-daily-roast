@@ -1,0 +1,110 @@
+name: Sunday Marathon Broadcast
+
+on:
+  schedule:
+    # 09:10 Tallinn in winter/summer variants
+    - cron: '10 6 * * 0'
+    - cron: '10 7 * * 0'
+  workflow_dispatch:
+    inputs:
+      replace_existing:
+        description: 'Delete same-day editions before regenerating'
+        required: false
+        type: boolean
+        default: false
+      upload_youtube:
+        description: 'Upload each marathon episode to YouTube'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: sunday-marathon
+  cancel-in-progress: false
+
+jobs:
+  run-sunday-marathon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Generate Sunday marathon episodes
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          FORCE_REPLACE_EDITION: ${{ (inputs.replace_existing == true || github.event.inputs.replace_existing == 'true') && '1' || '0' }}
+
+          # Broadcast voice/persona tuning
+          PLATFORM_PROMO_BRIEF: ${{ secrets.PLATFORM_PROMO_BRIEF || vars.PLATFORM_PROMO_BRIEF || '' }}
+          HOST_BIO_JOE: ${{ secrets.HOST_BIO_JOE || vars.HOST_BIO_JOE || '' }}
+          HOST_BIO_JANE: ${{ secrets.HOST_BIO_JANE || vars.HOST_BIO_JANE || '' }}
+          HOST_SHARED_HISTORY: ${{ secrets.HOST_SHARED_HISTORY || vars.HOST_SHARED_HISTORY || '' }}
+          HOST_MEMORY_BANK: ${{ secrets.HOST_MEMORY_BANK || vars.HOST_MEMORY_BANK || '' }}
+          TANGENT_STYLE_GUIDE: ${{ secrets.TANGENT_STYLE_GUIDE || vars.TANGENT_STYLE_GUIDE || '' }}
+          TARGET_TANGENTS_PER_EPISODE: ${{ secrets.TARGET_TANGENTS_PER_EPISODE || vars.TARGET_TANGENTS_PER_EPISODE || '3' }}
+
+          # Memory linking
+          MEMORY_LOOKBACK_DAYS: ${{ secrets.MEMORY_LOOKBACK_DAYS || vars.MEMORY_LOOKBACK_DAYS || '14' }}
+          MEMORY_MAX_LINKS: ${{ secrets.MEMORY_MAX_LINKS || vars.MEMORY_MAX_LINKS || '8' }}
+          ENABLE_LISTENER_PUNCHLINES: ${{ vars.ENABLE_LISTENER_PUNCHLINES || '1' }}
+          LISTENER_PUNCHLINE_LOOKBACK_HOURS: ${{ vars.LISTENER_PUNCHLINE_LOOKBACK_HOURS || '72' }}
+          LISTENER_PUNCHLINE_MAX_ITEMS: ${{ vars.LISTENER_PUNCHLINE_MAX_ITEMS || '5' }}
+          RUN_WEEKLY_TOP10_BEFORE_MARATHON: ${{ vars.RUN_WEEKLY_TOP10_BEFORE_MARATHON || '1' }}
+
+          # BGM
+          BGM_VOLUME: ${{ vars.BGM_VOLUME || '0.02' }}
+          BGM_TRACKS_JSON: ${{ vars.BGM_TRACKS_JSON || secrets.BGM_TRACKS_JSON || '' }}
+          BGM_TRACK_UPBEAT: ${{ vars.BGM_TRACK_UPBEAT || '' }}
+          BGM_TRACK_CHILL: ${{ vars.BGM_TRACK_CHILL || '' }}
+          BGM_TRACK_FUNKY: ${{ vars.BGM_TRACK_FUNKY || '' }}
+          BGM_TRACK_DRAMATIC: ${{ vars.BGM_TRACK_DRAMATIC || '' }}
+
+          # Promo transition jingle
+          SUNDAY_PROMO_BUMPER_TRACK: ${{ vars.SUNDAY_PROMO_BUMPER_TRACK || 'sounds/dragon-studio-whoosh-cinematic-376875.mp3' }}
+          PROMO_BUMPER_SECONDS: ${{ vars.PROMO_BUMPER_SECONDS || '1.0' }}
+          PROMO_PAUSE_SECONDS: ${{ vars.PROMO_PAUSE_SECONDS || '0.8' }}
+          # Podbean auto-publish
+          ENABLE_PODBEAN: ${{ vars.ENABLE_PODBEAN || '0' }}
+          PODBEAN_CLIENT_ID: ${{ secrets.PODBEAN_CLIENT_ID }}
+          PODBEAN_CLIENT_SECRET: ${{ secrets.PODBEAN_CLIENT_SECRET }}
+
+          # YouTube
+          SUNDAY_UPLOAD_YOUTUBE: ${{ (inputs.upload_youtube == true || github.event.inputs.upload_youtube == 'true' || github.event_name == 'schedule') && '1' || '0' }}
+          SITE_URL: ${{ secrets.SITE_URL || 'https://thedailyroast.online' }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          YT_PRIVACY_STATUS: ${{ vars.YT_PRIVACY_STATUS || secrets.YT_PRIVACY_STATUS || 'public' }}
+          YT_PODCAST_PLAYLIST_ID: ${{ vars.YT_PODCAST_PLAYLIST_ID || secrets.YT_PODCAST_PLAYLIST_ID || '' }}
+
+          # Micro clips
+          SUNDAY_GENERATE_CLIPS: ${{ secrets.SUNDAY_GENERATE_CLIPS || vars.SUNDAY_GENERATE_CLIPS || '1' }}
+          SUNDAY_CLIP_COUNT: ${{ secrets.SUNDAY_CLIP_COUNT || vars.SUNDAY_CLIP_COUNT || '3' }}
+          SUNDAY_CLIP_SECONDS: ${{ secrets.SUNDAY_CLIP_SECONDS || vars.SUNDAY_CLIP_SECONDS || '30' }}
+          SUNDAY_CLIP_BUCKET: ${{ secrets.SUNDAY_CLIP_BUCKET || vars.SUNDAY_CLIP_BUCKET || 'broadcast-clips' }}
+        run: |
+          echo "🎯 Running Sunday marathon orchestration..."
+          node scripts/run-sunday-marathon.mjs
+
+      - name: Report status
+        if: always()
+        run: |
+          echo "📅 Sunday marathon workflow completed at $(date -u)"

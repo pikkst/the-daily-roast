@@ -1,0 +1,54 @@
+name: Auto-Post to Social Media
+
+on:
+  # Run 30 minutes after daily content generation (8:30 UTC)
+  schedule:
+    - cron: '30 8 * * *'
+  
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      max_posts:
+        description: 'Max articles to post (default: 3)'
+        required: false
+        default: '3'
+
+jobs:
+  auto-post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Post to Reddit & Twitter/X
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SITE_URL: ${{ secrets.SITE_URL || 'https://thedailyroast.online' }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
+          REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
+          REDDIT_SUBREDDIT: ${{ secrets.REDDIT_SUBREDDIT }}
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
+          MAX_AUTO_POSTS: ${{ github.event.inputs.max_posts || '3' }}
+        run: node scripts/auto-post.mjs
+
+      - name: Report status
+        if: always()
+        run: |
+          echo "📅 Auto-posting completed at $(date -u)"

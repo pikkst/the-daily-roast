@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="js/analytics-consent.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weekly Top 10 - The Daily Roast</title>
+  <meta name="description" content="The Daily Roast Weekly Top 10: the most roasted and most absurd satire stories of the week.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800;900&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#dc3545">
+</head>
+<body>
+  <header class="site-header site-header--compact">
+    <div class="container">
+      <div class="header-brand">
+        <a href="/" class="logo">
+          <span class="logo-icon">🔥</span>
+          <div class="logo-text">
+            <h1 class="logo-title logo-title--small">The Daily Roast</h1>
+          </div>
+        </a>
+        <div class="header-links">
+          <a href="/" class="back-link">← Back to Headlines</a>
+          <a href="about.html" class="back-link">About</a>
+          <a href="contact.html" class="back-link">Contact</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="site-main">
+    <div class="container weekly-page">
+      <div class="weekly-page-hero">
+        <p class="weekly-page-kicker">🏆 WEEKLY RECAP</p>
+        <h2 class="weekly-page-title">Top 10 Most Roasted Stories</h2>
+        <p class="weekly-page-subtitle" id="weekly-page-subtitle">Loading this week's winners...</p>
+      </div>
+
+      <section id="weekly-top-card-wrap" style="display:none;"></section>
+
+      <section class="weekly-list-section">
+        <div class="weekly-list" id="weekly-list">
+          <div class="weekly-loading">Gathering absurdity metrics...</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <div class="footer-disclaimer">
+          <p><strong>⚠️ Disclaimer:</strong> The Daily Roast is a <strong>satirical and parody</strong> publication. All stories are fictional and AI-generated.</p>
+        </div>
+        <p class="footer-copy">&copy; <span id="footer-year"></span> The Daily Roast. Powered by AI, fueled by absurdity. <a href="https://www.youtube.com/channel/UC2EbJVd4HuxKgNt58VXPpDw" target="_blank" rel="noopener noreferrer">YouTube Channel</a> · <a href="about.html">About</a> · <a href="contact.html">Contact</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/weekly.js"></script>
+</body>
+</html>

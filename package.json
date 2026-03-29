@@ -1,0 +1,29 @@
+{
+  "name": "the-daily-roast",
+  "version": "1.0.0",
+  "description": "AI-powered satirical news website - Real headlines, unreal stories",
+  "type": "module",
+  "scripts": {
+    "generate": "node scripts/generate-articles.mjs",
+    "broadcast": "node scripts/generate-broadcast.mjs",
+    "broadcast:sunday": "node scripts/run-sunday-marathon.mjs",
+    "broadcast:clips": "node scripts/generate-micro-clips.mjs",
+    "youtube-upload": "node scripts/upload-latest-broadcast-youtube.mjs",
+    "lock-roast": "node scripts/lock-roast-of-the-day.mjs",
+    "weekly-top10": "node scripts/generate-weekly-top10.mjs",
+    "setup-seed": "node scripts/seed-initial.mjs",
+    "dev": "npx serve public -l 3000"
+  },
+  "dependencies": {
+    "@google/genai": "^1.46.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "fast-xml-parser": "^5.5.9",
+    "googleapis": "^144.0.0"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
