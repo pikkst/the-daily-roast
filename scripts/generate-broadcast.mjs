@@ -1323,6 +1323,8 @@ WRITE A COMPLETE RADIO SHOW SCRIPT covering ALL ${articles.length} stories. The 
   - Keep it to 2-4 lines total.
   - Use the PLATFORM PROMO BRIEF above.
   - Make it sound naturally in-character for Joe and Jane.
+  - The handoff OUT of the promo must be a natural closing like "back to the news" or "alright, where were we" — NOT a reference to silence, pauses, audio, or sound effects.
+  - The handoff INTO the promo must be a natural phrase like "a word from our sponsor", "quick word from The Daily Roast", "time for a sponsor break", or "now a message from..." — the audio bumper plays automatically; hosts must NOT describe or announce it.
 5. **WRAP-UP** — Final banter, use the edition-specific signoff instruction above
 
 ${SUNDAY_DEEP_DIVE ? '6. **REALITY CHECK MOMENT** — Include one concise compare/contrast beat for a top story:\n   - what happened in real reporting context\n   - what absurd exaggeration the roast adds\n   - why the contrast is funny and revealing' : ''}
@@ -1385,7 +1387,7 @@ IMPORTANT:
 - Avoid reusing the same punchline or setup from earlier broadcasts listed in context.
 - Output only spoken script lines (no stage directions, no SFX markers, no narrator labels).
 - Avoid robotic wording like "as an AI" or "as a language model".
-- Keep the promo section clearly marked by conversational phrasing such as "quick station break" or equivalent, but do not use bracketed production cues.
+- Keep the promo section clearly marked by a natural radio handoff phrase such as "a word from our sponsor", "quick sponsor break", "now a message from", or "time for our sponsor" — do NOT use bracketed production cues and do NOT mention pauses, silence, sound effects, or audio in the promo handoff lines.
 - Whenever a tangent appears, ensure the next 1-2 lines reconnect cleanly to the current headline.
 
 Also choose a background music theme from: upbeat, chill, funky, dramatic
@@ -1524,9 +1526,15 @@ async function generateAudio(script, retries = 2) {
   }
 
   function findPromoSegment(lines) {
+    const promoKeywords = [
+      'station break', 'sponsor', 'quick break', 'word from', 'message from',
+      'sponsor break', 'a break', 'commercial break', 'ad break',
+      'back after', 'short break', 'quick word', 'paid for by',
+      'brought to you', 'our partner'
+    ];
     const promoStart = (lines || []).findIndex((line) => {
       const text = String(line?.text || '').toLowerCase();
-      return text.includes('station break') || text.includes('sponsor') || text.includes('quick break');
+      return promoKeywords.some(kw => text.includes(kw));
     });
 
     if (promoStart === -1) return null;
