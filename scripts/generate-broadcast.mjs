@@ -156,6 +156,8 @@ const parsedPromoPauseSeconds = Number(process.env.PROMO_PAUSE_SECONDS || '0.7')
 const PROMO_PAUSE_SECONDS = Number.isFinite(parsedPromoPauseSeconds)
   ? Math.max(0.2, Math.min(2.5, parsedPromoPauseSeconds))
   : 0.7;
+const PROMO_HANDOFF_MARKER = String(process.env.PROMO_HANDOFF_MARKER || 'now a word from our sponsor').trim().toLowerCase();
+const PROMO_RETURN_MARKER = String(process.env.PROMO_RETURN_MARKER || 'welcome back, now where were we').trim().toLowerCase();
 
 // ---------- Podbean API Integration ----------
 async function podbeanGetToken() {
@@ -1329,6 +1331,8 @@ WRITE A COMPLETE RADIO SHOW SCRIPT covering ALL ${articles.length} stories. The 
   - Keep it to 2-4 lines total.
   - Use the PLATFORM PROMO BRIEF above.
   - Make it sound naturally in-character for Joe and Jane.
+  - REQUIRED exact handoff line before promo block: include one line containing this exact phrase: "Now a word from our sponsor".
+  - REQUIRED exact return line after promo block: include one line containing this exact phrase: "Welcome back, now where were we".
   - The handoff OUT of the promo must be a natural closing like "back to the news" or "alright, where were we" — NOT a reference to silence, pauses, audio, or sound effects.
   - The handoff INTO the promo must be a natural phrase like "a word from our sponsor", "quick word from The Daily Roast", "time for a sponsor break", or "now a message from..." — the audio bumper plays automatically; hosts must NOT describe or announce it.
 5. **WRAP-UP** — Final banter, use the edition-specific signoff instruction above
@@ -1403,6 +1407,9 @@ IMPORTANT:
 - Output only spoken script lines (no stage directions, no SFX markers, no narrator labels).
 - Avoid robotic wording like "as an AI" or "as a language model".
 - Keep the promo section clearly marked by a natural radio handoff phrase such as "a word from our sponsor", "quick sponsor break", "now a message from", or "time for our sponsor" — do NOT use bracketed production cues and do NOT mention pauses, silence, sound effects, or audio in the promo handoff lines.
+- Include both exact marker phrases once each so audio splitting is deterministic:
+  - "Now a word from our sponsor"
+  - "Welcome back, now where were we"
 - Whenever a tangent appears, ensure the next 1-2 lines reconnect cleanly to the current headline.
 
 Also choose a background music theme from: upbeat, chill, funky, dramatic
@@ -1551,7 +1558,32 @@ async function generateAudio(script, retries = 2) {
     return response?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
   }
 
-  function findPromoSegment(lines) {
+  function normalizeMarkerText(text) {
+    return String(text || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function findPromoSegmentByMarkers(lines) {
+    if (!Array.isArray(lines) || lines.length < 6) return null;
+
+    const normalized = lines.map((line) => normalizeMarkerText(line?.text));
+    const handoffIdx = normalized.findIndex((text) => text.includes(PROMO_HANDOFF_MARKER));
+    if (handoffIdx === -1) return null;
+
+    const returnIdx = normalized.findIndex((text, idx) => idx > handoffIdx && text.includes(PROMO_RETURN_MARKER));
+    if (returnIdx === -1) return null;
+
+    const promoStart = handoffIdx + 1;
+    const promoEnd = returnIdx - 1;
+
+    if (promoStart <= 0 || promoEnd < promoStart || returnIdx >= lines.length - 1) return null;
+
+    const promoLen = promoEnd - promoStart + 1;
+    if (promoLen < 1 || promoLen > 8) return null;
+
+    return { promoStart, promoEnd, markerBased: true, handoffIdx, returnIdx };
+  }
+
+  function findPromoSegmentByKeywords(lines) {
     if (!Array.isArray(lines) || lines.length < 6) return null;
 
     const promoStartKeywords = [
@@ -1589,7 +1621,13 @@ async function generateAudio(script, retries = 2) {
     }
 
     if (promoStart <= 0 || promoEnd >= lines.length - 1) return null;
-    return { promoStart, promoEnd };
+    return { promoStart, promoEnd, markerBased: false };
+  }
+
+  function findPromoSegment(lines) {
+    const byMarkers = findPromoSegmentByMarkers(lines);
+    if (byMarkers) return byMarkers;
+    return findPromoSegmentByKeywords(lines);
   }
 
   function createSilenceWavBuffer(seconds, sampleRate = 24000) {
@@ -1675,7 +1713,11 @@ async function generateAudio(script, retries = 2) {
       return null;
     }
 
-    console.log(`  🎚️  Promo segment detected at lines ${promoSegment.promoStart + 1}-${promoSegment.promoEnd + 1}; generating pre/promo/post with pauses.`);
+    if (promoSegment.markerBased) {
+      console.log(`  🎯 Marker promo split: handoff line ${promoSegment.handoffIdx + 1}, promo lines ${promoSegment.promoStart + 1}-${promoSegment.promoEnd + 1}, return line ${promoSegment.returnIdx + 1}.`);
+    } else {
+      console.log(`  🎚️  Keyword promo split fallback at lines ${promoSegment.promoStart + 1}-${promoSegment.promoEnd + 1}.`);
+    }
 
     const beforeWav = await generateChunkAudio(before);
     await sleep(800);
