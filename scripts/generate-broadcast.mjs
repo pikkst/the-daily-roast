@@ -1552,21 +1552,43 @@ async function generateAudio(script, retries = 2) {
   }
 
   function findPromoSegment(lines) {
-    const promoKeywords = [
-      'station break', 'sponsor', 'quick break', 'word from', 'message from',
-      'sponsor break', 'a break', 'commercial break', 'ad break',
-      'back after', 'short break', 'quick word', 'paid for by',
-      'brought to you', 'our partner'
+    if (!Array.isArray(lines) || lines.length < 6) return null;
+
+    const promoStartKeywords = [
+      'a word from our sponsor', 'quick sponsor break', 'time for our sponsor',
+      'now a message from', 'word from our sponsor', 'sponsor break',
+      'commercial break', 'ad break', 'station break', 'brought to you by'
     ];
-    const promoStart = (lines || []).findIndex((line) => {
-      const text = String(line?.text || '').toLowerCase();
-      return promoKeywords.some(kw => text.includes(kw));
-    });
+    const promoEndKeywords = [
+      'back to the news', 'back to headlines', 'back to the headlines',
+      'back to our stories', 'where were we', 'and we are back',
+      "and we're back", 'all right, where were we', 'alright, where were we'
+    ];
 
-    if (promoStart === -1) return null;
+    const normalized = lines.map((line) => String(line?.text || '').toLowerCase());
+    const startCandidates = normalized
+      .map((text, idx) => ({ text, idx }))
+      .filter(({ text }) => promoStartKeywords.some((kw) => text.includes(kw)))
+      .map(({ idx }) => idx);
 
-    // Most promo sections are 2-4 lines. Keep a compact block.
-    const promoEnd = Math.min(lines.length - 1, promoStart + 3);
+    if (startCandidates.length === 0) return null;
+
+    // Prefer a promo handoff near the middle of the script, not the first random match.
+    const target = Math.floor(lines.length * 0.5);
+    const promoStart = startCandidates
+      .slice()
+      .sort((a, b) => Math.abs(a - target) - Math.abs(b - target))[0];
+
+    let promoEnd = Math.min(lines.length - 1, promoStart + 3);
+    const maxScan = Math.min(lines.length - 1, promoStart + 7);
+    for (let i = promoStart + 1; i <= maxScan; i++) {
+      if (promoEndKeywords.some((kw) => normalized[i].includes(kw))) {
+        promoEnd = i;
+        break;
+      }
+    }
+
+    if (promoStart <= 0 || promoEnd >= lines.length - 1) return null;
     return { promoStart, promoEnd };
   }
 
@@ -1653,7 +1675,7 @@ async function generateAudio(script, retries = 2) {
       return null;
     }
 
-    console.log('  🎚️  Promo segment detected; generating pre/promo/post with pauses.');
+    console.log(`  🎚️  Promo segment detected at lines ${promoSegment.promoStart + 1}-${promoSegment.promoEnd + 1}; generating pre/promo/post with pauses.`);
 
     const beforeWav = await generateChunkAudio(before);
     await sleep(800);
