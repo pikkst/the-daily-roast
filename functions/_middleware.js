@@ -28,7 +28,7 @@ function applySecurityHeaders(response) {
   if (isHtml) {
     secured.headers.set(
       'Content-Security-Policy',
-      "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://cdn.jsdelivr.net https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://pbwswrieljqfshnjulzs.supabase.co https://www.google-analytics.com https://region1.google-analytics.com; frame-src https://js.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+      "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://cdn.jsdelivr.net https://js.stripe.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://pbwswrieljqfshnjulzs.supabase.co https://www.google-analytics.com https://region1.google-analytics.com https://cdn.jsdelivr.net; media-src 'self' https://pbwswrieljqfshnjulzs.supabase.co https://cdn.pixabay.com blob:; frame-src https://js.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self';"
     );
   }
 

@@ -160,6 +160,31 @@
   // ── Weekly Saga Banner ──
 
   async function loadWeeklySaga(db) {
+    if (!db || !els.weeklySaga || !els.weeklySagaText) return;
+    try {
+      const { data: summaries } = await db
+        .from('weekly_roast_summaries')
+        .select('id, top_article_title, week_start_date, week_end_date')
+        .order('week_start_date', { ascending: false })
+        .limit(1);
+      const summary = (summaries || [])[0];
+      if (!summary?.top_article_title) return;
+
+      const { data: items } = await db
+        .from('weekly_roast_items')
+        .select('title, absurdity_score')
+        .eq('summary_id', summary.id)
+        .order('absurdity_score', { ascending: false })
+        .limit(1);
+
+      const sagaTitle = (items && items[0]?.title) || summary.top_article_title;
+      els.weeklySagaText.textContent = sagaTitle;
+      els.weeklySaga.style.display = 'flex';
+    } catch (_) {
+      // Best-effort only — saga banner is non-critical
+    }
+  }
+
   // ── Intensive Day Leaderboard ──
 
   async function loadIntensiveLeaderboard(db) {
@@ -170,7 +195,7 @@
       const tallinnOffset = new Intl.DateTimeFormat('en', { timeZone: 'Europe/Tallinn', timeZoneName: 'shortOffset' })
         .formatToParts(now).find(p => p.type === 'timeZoneName')?.value || 'GMT+3';
       const offsetMatch = tallinnOffset.match(/([+-])(\d+)/);
-      const offsetHours = offsetMatch ? parseInt(offsetMatch[1] + offsetMatch[2]) : 3;
+      const offsetHours = offsetMatch ? parseInt(offsetMatch[1] + offsetMatch[2], 10) : 3;
       const midnight = new Date(now);
       midnight.setUTCHours(midnight.getUTCHours() - offsetHours);
       midnight.setUTCHours(0, 0, 0, 0);
@@ -185,7 +210,6 @@
 
       if (error || !data || data.length <= 3) return;
 
-      // Tally category appearances
       const catCounts = {};
       for (const b of data) {
         const cats = b.category_summary || {};
@@ -214,29 +238,6 @@
       els.intensiveBar.style.display = 'flex';
     } catch (_) {
       // Non-critical
-    }
-  }    if (!db || !els.weeklySaga || !els.weeklySagaText) return;
-    try {
-      const { data: summaries } = await db
-        .from('weekly_roast_summaries')
-        .select('id, top_article_title, week_start_date, week_end_date')
-        .order('week_start_date', { ascending: false })
-        .limit(1);
-      const summary = (summaries || [])[0];
-      if (!summary?.top_article_title) return;
-
-      const { data: items } = await db
-        .from('weekly_roast_items')
-        .select('title, absurdity_score')
-        .eq('summary_id', summary.id)
-        .order('absurdity_score', { ascending: false })
-        .limit(1);
-
-      const sagaTitle = (items && items[0]?.title) || summary.top_article_title;
-      els.weeklySagaText.textContent = sagaTitle;
-      els.weeklySaga.style.display = 'flex';
-    } catch (_) {
-      // Best-effort only — saga banner is non-critical
     }
   }
 
