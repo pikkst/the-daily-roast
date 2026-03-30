@@ -12,6 +12,7 @@
     dramatic: 'https://cdn.pixabay.com/audio/2022/08/04/audio_2dde6a6983.mp3'
   };
   const USE_CLIENT_BGM_OVERLAY = false;
+  const ENABLE_VISUALIZER = false;
 
   const CATEGORY_ICONS = {
     politics: '🏛️', technology: '💻', business: '💼', science: '🔬',
@@ -33,6 +34,7 @@
   let playerInitialized = false;
   let shareInitialized = false;
   let countdownTimer = null;
+  let playInFlight = false;
 
   // DOM refs
   const els = {};
@@ -367,8 +369,16 @@
     els.volume.addEventListener('input', (e) => {
       const vol = parseInt(e.target.value) / 100;
       els.audio.volume = vol;
+      if (vol > 0) {
+        els.audio.muted = false;
+      }
       els.volBtn.textContent = vol === 0 ? '🔇' : vol < 0.5 ? '🔉' : '🔊';
     });
+
+    // Initialize volume from slider so startup state always matches UI.
+    const initialVol = Math.min(1, Math.max(0, parseInt(els.volume.value || '80', 10) / 100));
+    els.audio.volume = initialVol;
+    els.volBtn.textContent = initialVol === 0 ? '🔇' : initialVol < 0.5 ? '🔉' : '🔊';
 
     // BGM Volume
     if (USE_CLIENT_BGM_OVERLAY && els.bgmVolume) {
@@ -385,6 +395,7 @@
   }
 
   async function togglePlay() {
+    if (playInFlight) return;
     if (isPlaying) {
       stopPlayback();
     } else {
@@ -393,30 +404,35 @@
   }
 
   async function startPlayback() {
+    if (playInFlight) return;
+    playInFlight = true;
     try {
-      // Init AudioContext for visualizer
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-      }
-
-      if (audioCtx.state === 'suspended') {
-        await audioCtx.resume();
-      }
-
-      if (!sourceNode && analyser) {
-        try {
-          sourceNode = audioCtx.createMediaElementSource(els.audio);
-          sourceNode.connect(analyser);
-          analyser.connect(audioCtx.destination);
-          visualizerReady = true;
-        } catch (e) {
-          // Fallback: keep normal <audio> playback even if WebAudio graph fails.
-          visualizerReady = false;
-          analyser = null;
-          console.warn('Visualizer disabled for main audio:', e);
+      if (ENABLE_VISUALIZER) {
+        // Optional visualizer path; disabled by default to avoid silent cross-origin playback.
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 256;
         }
+
+        if (audioCtx.state === 'suspended') {
+          await audioCtx.resume();
+        }
+
+        if (!sourceNode && analyser) {
+          try {
+            sourceNode = audioCtx.createMediaElementSource(els.audio);
+            sourceNode.connect(analyser);
+            analyser.connect(audioCtx.destination);
+            visualizerReady = true;
+          } catch (e) {
+            visualizerReady = false;
+            analyser = null;
+            console.warn('Visualizer disabled for main audio:', e);
+          }
+        }
+      } else {
+        visualizerReady = false;
       }
 
       if (USE_CLIENT_BGM_OVERLAY && !bgmSourceNode && els.bgm.src) {
@@ -426,6 +442,10 @@
         } catch (e) {
           console.warn('BGM source node failed:', e);
         }
+      }
+
+      if (els.audio.muted && els.audio.volume > 0) {
+        els.audio.muted = false;
       }
 
       await els.audio.play();
@@ -448,7 +468,11 @@
         startVisualizer();
       }
     } catch (err) {
-      console.error('Playback failed:', err);
+      if (err?.name !== 'AbortError') {
+        console.error('Playback failed:', err);
+      }
+    } finally {
+      playInFlight = false;
     }
   }
 
