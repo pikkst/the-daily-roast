@@ -279,8 +279,10 @@
 
     if (els.downloadBtn) {
       if (broadcast.audio_url) {
-        els.downloadBtn.href = broadcast.audio_url;
-        els.downloadBtn.setAttribute('download', `${(broadcast.title || 'daily-roast-radio').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.wav`);
+        const normalizedAudioUrl = normalizeAudioUrl(broadcast.audio_url);
+        const ext = getAudioExtension(normalizedAudioUrl) || 'mp3';
+        els.downloadBtn.href = normalizedAudioUrl;
+        els.downloadBtn.setAttribute('download', `${(broadcast.title || 'daily-roast-radio').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.${ext}`);
       } else {
         els.downloadBtn.removeAttribute('href');
       }
@@ -288,11 +290,9 @@
 
     // Player
     if (broadcast.audio_url) {
-      // Needed when piping remote media through WebAudio (visualizer path).
-      els.audio.crossOrigin = 'anonymous';
+      const normalizedAudioUrl = normalizeAudioUrl(broadcast.audio_url);
       els.bgm.crossOrigin = 'anonymous';
-      els.audio.src = broadcast.audio_url;
-      els.audio.load();
+      setAudioSource(els.audio, normalizedAudioUrl);
       els.playerSection.style.display = 'block';
 
       // Optional client-side BGM overlay (disabled by default).
@@ -345,6 +345,16 @@
 
     els.audio.addEventListener('ended', () => {
       stopPlayback();
+    });
+
+    els.audio.addEventListener('error', () => {
+      const mediaError = els.audio.error;
+      const code = mediaError ? mediaError.code : 0;
+      console.error('Radio audio load error:', {
+        code,
+        message: describeMediaError(code),
+        src: getCurrentAudioSource(els.audio)
+      });
     });
 
     // Seek
@@ -719,6 +729,72 @@
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
     return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function normalizeAudioUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (trimmed.startsWith('//')) {
+      return window.location.protocol + trimmed;
+    }
+    return trimmed;
+  }
+
+  function getAudioExtension(url) {
+    if (!url) return '';
+    const baseUrl = url.split('?')[0].split('#')[0];
+    const match = baseUrl.match(/\.([a-z0-9]+)$/i);
+    return match ? match[1].toLowerCase() : '';
+  }
+
+  function inferAudioMimeType(url) {
+    const ext = getAudioExtension(url);
+    if (ext === 'mp3') return 'audio/mpeg';
+    if (ext === 'wav') return 'audio/wav';
+    if (ext === 'ogg' || ext === 'oga') return 'audio/ogg';
+    if (ext === 'webm') return 'audio/webm';
+    if (ext === 'm4a' || ext === 'mp4') return 'audio/mp4';
+    if (ext === 'aac') return 'audio/aac';
+    return '';
+  }
+
+  function setAudioSource(audioEl, sourceUrl) {
+    if (!audioEl) return;
+    const normalized = normalizeAudioUrl(sourceUrl);
+    audioEl.pause();
+    audioEl.removeAttribute('src');
+    while (audioEl.firstChild) {
+      audioEl.removeChild(audioEl.firstChild);
+    }
+
+    if (!normalized) {
+      audioEl.load();
+      return;
+    }
+
+    const source = document.createElement('source');
+    source.src = normalized;
+    const mimeType = inferAudioMimeType(normalized);
+    if (mimeType) {
+      source.type = mimeType;
+    }
+
+    audioEl.appendChild(source);
+    audioEl.load();
+  }
+
+  function getCurrentAudioSource(audioEl) {
+    if (!audioEl) return '';
+    const sourceEl = audioEl.querySelector('source');
+    return sourceEl?.src || audioEl.currentSrc || audioEl.src || '';
+  }
+
+  function describeMediaError(code) {
+    if (code === 1) return 'MEDIA_ERR_ABORTED';
+    if (code === 2) return 'MEDIA_ERR_NETWORK';
+    if (code === 3) return 'MEDIA_ERR_DECODE';
+    if (code === 4) return 'MEDIA_ERR_SRC_NOT_SUPPORTED';
+    return 'UNKNOWN_MEDIA_ERROR';
   }
 
   function escapeHtml(str) {

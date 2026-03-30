@@ -83,7 +83,7 @@
     // Create audio elements
     audio = new Audio();
     audio.preload = 'none';
-    audio.src = broadcast.audio_url;
+    setAudioSource(audio, broadcast.audio_url);
 
     bgm = new Audio();
     bgm.preload = 'none';
@@ -140,6 +140,15 @@
         updatePlayIcon();
         bgm.pause();
       });
+      audio.addEventListener('error', () => {
+        const mediaError = audio.error;
+        const code = mediaError ? mediaError.code : 0;
+        console.error('Mini-player audio load error:', {
+          code,
+          message: describeMediaError(code),
+          src: getCurrentAudioSource(audio)
+        });
+      });
     }
   }
 
@@ -181,5 +190,71 @@
       const s = Math.floor(audio.currentTime % 60);
       timeEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
     }
+  }
+
+  function normalizeAudioUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (trimmed.startsWith('//')) {
+      return window.location.protocol + trimmed;
+    }
+    return trimmed;
+  }
+
+  function getAudioExtension(url) {
+    if (!url) return '';
+    const baseUrl = url.split('?')[0].split('#')[0];
+    const match = baseUrl.match(/\.([a-z0-9]+)$/i);
+    return match ? match[1].toLowerCase() : '';
+  }
+
+  function inferAudioMimeType(url) {
+    const ext = getAudioExtension(url);
+    if (ext === 'mp3') return 'audio/mpeg';
+    if (ext === 'wav') return 'audio/wav';
+    if (ext === 'ogg' || ext === 'oga') return 'audio/ogg';
+    if (ext === 'webm') return 'audio/webm';
+    if (ext === 'm4a' || ext === 'mp4') return 'audio/mp4';
+    if (ext === 'aac') return 'audio/aac';
+    return '';
+  }
+
+  function setAudioSource(audioEl, sourceUrl) {
+    if (!audioEl) return;
+    const normalized = normalizeAudioUrl(sourceUrl);
+    audioEl.pause();
+    audioEl.removeAttribute('src');
+    while (audioEl.firstChild) {
+      audioEl.removeChild(audioEl.firstChild);
+    }
+
+    if (!normalized) {
+      audioEl.load();
+      return;
+    }
+
+    const source = document.createElement('source');
+    source.src = normalized;
+    const mimeType = inferAudioMimeType(normalized);
+    if (mimeType) {
+      source.type = mimeType;
+    }
+
+    audioEl.appendChild(source);
+    audioEl.load();
+  }
+
+  function getCurrentAudioSource(audioEl) {
+    if (!audioEl) return '';
+    const sourceEl = audioEl.querySelector('source');
+    return sourceEl?.src || audioEl.currentSrc || audioEl.src || '';
+  }
+
+  function describeMediaError(code) {
+    if (code === 1) return 'MEDIA_ERR_ABORTED';
+    if (code === 2) return 'MEDIA_ERR_NETWORK';
+    if (code === 3) return 'MEDIA_ERR_DECODE';
+    if (code === 4) return 'MEDIA_ERR_SRC_NOT_SUPPORTED';
+    return 'UNKNOWN_MEDIA_ERROR';
   }
 })();
