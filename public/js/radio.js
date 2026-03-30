@@ -464,9 +464,7 @@
       els.pauseIcon.style.display = 'block';
       els.playBtn.classList.add('playing');
 
-      if (visualizerReady) {
-        startVisualizer();
-      }
+      startVisualizer();
     } catch (err) {
       if (err?.name !== 'AbortError') {
         console.error('Playback failed:', err);
@@ -496,17 +494,34 @@
   // ── Visualizer ──
 
   function startVisualizer() {
-    if (!analyser || !els.canvas) return;
+    if (!els.canvas) return;
+
+    if (animFrameId) {
+      cancelAnimationFrame(animFrameId);
+      animFrameId = null;
+    }
 
     const ctx = els.canvas.getContext('2d');
-    const bufferLength = analyser.frequencyBinCount;
+    const bufferLength = analyser ? analyser.frequencyBinCount : 64;
     const dataArray = new Uint8Array(bufferLength);
 
     function draw() {
       if (!isPlaying) return;
       animFrameId = requestAnimationFrame(draw);
 
-      analyser.getByteFrequencyData(dataArray);
+      if (analyser) {
+        analyser.getByteFrequencyData(dataArray);
+      } else {
+        // Fallback animation so bars still move when analyzer is unavailable.
+        const t = els.audio?.currentTime || 0;
+        for (let i = 0; i < bufferLength; i++) {
+          const wave = Math.sin((t * 3.2) + (i * 0.35));
+          const pulse = Math.sin((t * 1.7) + (i * 0.11));
+          const noise = (Math.sin((t * 8.0) + (i * 1.91)) + 1) * 0.5;
+          const amp = Math.max(0, (wave * 0.55) + (pulse * 0.35) + (noise * 0.25));
+          dataArray[i] = Math.min(255, Math.floor(amp * 255));
+        }
+      }
 
       const w = els.canvas.width;
       const h = els.canvas.height;
