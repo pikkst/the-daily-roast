@@ -21,7 +21,24 @@ import https from 'https';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const SITE_URL = process.env.SITE_URL || 'https://thedailyroast.online';
+const SITE_URL = normalizeSiteUrl(process.env.SITE_URL);
+
+function normalizeSiteUrl(rawValue) {
+  const fallback = 'https://thedailyroast.online';
+  const raw = String(rawValue || fallback).trim().replace(/\/$/, '');
+  if (!raw) return fallback;
+
+  try {
+    const url = new URL(raw);
+    const host = String(url.hostname || '').toLowerCase();
+    if (host.endsWith('.pages.dev') || host.endsWith('.dev')) {
+      return fallback;
+    }
+    return `${url.protocol}//${url.host}`;
+  } catch (_) {
+    return fallback;
+  }
+}
 
 // Reddit
 const REDDIT_CLIENT_ID = process.env.REDDIT_CLIENT_ID;

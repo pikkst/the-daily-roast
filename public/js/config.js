@@ -126,7 +126,7 @@ function getImageUrl(article) {
 
 function getPublicSiteUrl() {
   const host = String(window.location.hostname || '').toLowerCase();
-  const isPreviewHost = host.endsWith('.pages.dev') || host === 'localhost' || host === '127.0.0.1';
+  const isPreviewHost = host === 'localhost' || host === '127.0.0.1';
   if (isPreviewHost) {
     return window.location.origin.replace(/\/$/, '');
   }

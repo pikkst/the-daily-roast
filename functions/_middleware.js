@@ -6,9 +6,16 @@
 
 const DEFAULT_SUPABASE_URL = 'https://pbwswrieljqfshnjulzs.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBid3N3cmllbGpxZnNobmp1bHpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNzg5ODQsImV4cCI6MjA4OTc1NDk4NH0.buK75E84SRp-By6XCsKgMFnl31nNgj5cZV7e3lEkIiI';
+const DEFAULT_SITE_URL = 'https://thedailyroast.online';
 let SUPABASE_URL = DEFAULT_SUPABASE_URL;
 let SUPABASE_ANON_KEY = DEFAULT_SUPABASE_ANON_KEY;
+let SITE_URL = DEFAULT_SITE_URL;
 const CATEGORIES = ['politics', 'technology', 'business', 'science', 'entertainment', 'sports', 'world'];
+
+function getCanonicalSiteOrigin() {
+  const raw = String(SITE_URL || DEFAULT_SITE_URL).trim();
+  return (raw || DEFAULT_SITE_URL).replace(/\/$/, '');
+}
 
 function getArticlePath(slug) {
   const safe = encodeURIComponent(String(slug || '').trim());
@@ -210,8 +217,16 @@ async function handleSitemap(url) {
 export async function onRequest(context) {
   SUPABASE_URL = context.env?.SUPABASE_URL || DEFAULT_SUPABASE_URL;
   SUPABASE_ANON_KEY = context.env?.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
+  SITE_URL = context.env?.SITE_URL || DEFAULT_SITE_URL;
 
   const url = new URL(context.request.url);
+  const host = String(url.hostname || '').toLowerCase();
+
+  // Keep one public domain for social cards/shares/search indexing.
+  if (host.endsWith('.pages.dev')) {
+    const redirectUrl = `${getCanonicalSiteOrigin()}${url.pathname}${url.search}`;
+    return Response.redirect(redirectUrl, 301);
+  }
 
   // --- Dynamic Sitemap ---
   if (url.pathname === '/sitemap.xml' || url.pathname === '/sitemap') {

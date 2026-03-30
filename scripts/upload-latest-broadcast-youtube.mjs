@@ -11,7 +11,24 @@ const YT_CLIENT_ID = process.env.YT_CLIENT_ID;
 const YT_CLIENT_SECRET = process.env.YT_CLIENT_SECRET;
 const YT_REFRESH_TOKEN = process.env.YT_REFRESH_TOKEN;
 const YT_PODCAST_PLAYLIST_ID = (process.env.YT_PODCAST_PLAYLIST_ID || '').trim();
-const SITE_URL = process.env.SITE_URL || 'https://thedailyroast.online';
+const SITE_URL = normalizeSiteUrl(process.env.SITE_URL);
+
+function normalizeSiteUrl(rawValue) {
+  const fallback = 'https://thedailyroast.online';
+  const raw = String(rawValue || fallback).trim().replace(/\/$/, '');
+  if (!raw) return fallback;
+
+  try {
+    const url = new URL(raw);
+    const host = String(url.hostname || '').toLowerCase();
+    if (host.endsWith('.pages.dev') || host.endsWith('.dev')) {
+      return fallback;
+    }
+    return `${url.protocol}//${url.host}`;
+  } catch (_) {
+    return fallback;
+  }
+}
 
 function resolvePrivacyStatus(rawValue) {
   const allowed = new Set(['public', 'unlisted', 'private']);
